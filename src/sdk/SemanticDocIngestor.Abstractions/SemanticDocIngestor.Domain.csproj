@@ -1,0 +1,30 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>net9.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<PackageId>SemanticDocIngestor.Abstractions</PackageId>
+		<Authors>Ramin Esfahani</Authors>
+		<Version>1.0.5</Version>
+		<PackageIcon>logo.png</PackageIcon>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
+		<Description>
+			SemanticDocIngestor.Abstractions shared interfaces, contracts, and data transfer objects used across SemanticDocIngestor SDK.
+		</Description>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="AutoMapper" Version="13.0.1" />
+		<PackageReference Include="Microsoft.Extensions.AI" Version="9.9.0" />
+		<PackageReference Include="MongoDB.Bson" Version="3.4.3" />
+		<PackageReference Include="Ollama" Version="1.15.0" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<Folder Include="Abstracts\Providers\" />
+		<Folder Include="Enums\" />
+		<None Include="README.md" Pack="true" PackagePath="" />
+		<None Include="logo.png" Pack="true" PackagePath="" />
+	</ItemGroup>
+</Project>
