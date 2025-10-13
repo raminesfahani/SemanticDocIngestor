@@ -17,16 +17,16 @@
 
 	<ItemGroup>
 		<PackageReference Include="AutoMapper" Version="13.0.1" />
-		<PackageReference Include="HtmlAgilityPack" Version="1.12.3" />
 		<PackageReference Include="Microsoft.Extensions.Configuration" Version="9.0.9" />
 		<PackageReference Include="Ollama" Version="1.15.0" />
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\SemanticDocIngestor.Extensions\SemanticDocIngestor.Extensions.csproj" />
-		<ProjectReference Include="..\SemanticDocIngestor.Middleware\SemanticDocIngestor.Middleware.csproj" />
-		<None Include="README.md" Pack="true" PackagePath="" />
-		<None Include="logo.png" Pack="true" PackagePath="" />
+	  <Folder Include="DTOs\" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <ProjectReference Include="..\SemanticDocIngestor.Infrastructure\SemanticDocIngestor.Infrastructure.csproj" />
 	</ItemGroup>
 
 </Project>

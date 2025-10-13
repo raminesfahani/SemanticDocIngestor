@@ -5,13 +5,9 @@ VisualStudioVersion = 17.14.36429.23
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SemanticDocIngestor.Core", "src\sdk\SemanticDocIngestor.Core\SemanticDocIngestor.Core.csproj", "{54703720-B1E8-4A63-95B6-9E9A5B3E3CA5}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SemanticDocIngestor.Domain", "src\sdk\SemanticDocIngestor.Abstractions\SemanticDocIngestor.Domain.csproj", "{A7FABA21-B019-44AB-AD01-40F8F97C31CD}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SemanticDocIngestor.Domain", "src\sdk\SemanticDocIngestor.Domain\SemanticDocIngestor.Domain.csproj", "{A7FABA21-B019-44AB-AD01-40F8F97C31CD}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SemanticDocIngestor.Persistence", "src\sdk\SemanticDocIngestor.Persistence\SemanticDocIngestor.Persistence.csproj", "{217909D0-CC8B-4A02-8CE9-D06611DDA3EA}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SemanticDocIngestor.Middleware", "src\sdk\SemanticDocIngestor.Middleware\SemanticDocIngestor.Middleware.csproj", "{405C256E-7865-406C-8EBA-041A2863862A}"
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{02EA681E-C7D8-13C7-8484-4AC65E1B71E8}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SemanticDocIngestor.Infrastructure", "src\sdk\SemanticDocIngestor.Infrastructure\SemanticDocIngestor.Infrastructure.csproj", "{217909D0-CC8B-4A02-8CE9-D06611DDA3EA}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "solution", "solution", "{54B43900-9DD7-46E6-8090-23E9B690865B}"
 	ProjectSection(SolutionItems) = preProject
@@ -28,17 +24,13 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "solution", "solution", "{54
 		SUPPORT.md = SUPPORT.md
 	EndProjectSection
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{0718D8AB-B625-4B41-B662-9A958F74AB37}"
-EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "deployment", "deployment", "{C16F5C5B-40CA-496E-8199-1A62E68C0CC8}"
 	ProjectSection(SolutionItems) = preProject
 		deployment\Azure-Pipeline.yml = deployment\Azure-Pipeline.yml
 		.github\workflows\nuget-packages.yml = .github\workflows\nuget-packages.yml
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SemanticDocIngestor.Extensions", "src\sdk\SemanticDocIngestor.Extensions\SemanticDocIngestor.Extensions.csproj", "{90725D82-D6AF-49CF-9E51-6952813AE9F8}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SemanticDocIngestor.AppHost", "src\apps\SemanticDocIngestor.AppHost.AppHost\SemanticDocIngestor.AppHost.csproj", "{08A2EB39-FE00-4354-8106-5BECF6397D7B}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SemanticDocIngestor.AppHost", "src\apps\SemanticDocIngestor.AppHost\SemanticDocIngestor.AppHost.csproj", "{08A2EB39-FE00-4354-8106-5BECF6397D7B}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SemanticDocIngestor.AppHost.ServiceDefaults", "src\apps\SemanticDocIngestor.AppHost.ServiceDefaults\SemanticDocIngestor.AppHost.ServiceDefaults.csproj", "{9C2DB396-1970-10BD-73D1-220222949B80}"
 EndProject
@@ -46,11 +38,9 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SemanticDocIngestor.AppHost
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SemanticDocIngestor.AppHost.BlazorUI", "src\apps\SemanticDocIngestor.AppHost.BlazorUI\SemanticDocIngestor.AppHost.BlazorUI.csproj", "{D950AFEE-3F0E-36E1-C227-4718498D0EAB}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SemanticDocIngestor.AppHost.Tests", "tests\SemanticDocIngestor.AppHost.Tests\SemanticDocIngestor.AppHost.Tests.csproj", "{1DC4059D-93C8-2326-0A14-ED48EAA22CCF}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SemanticDocIngestor.Tests", "tests\SemanticDocIngestor.AppHost.Tests\SemanticDocIngestor.Tests.csproj", "{1DC4059D-93C8-2326-0A14-ED48EAA22CCF}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "sdk", "sdk", "{CC7DF785-1F17-46F7-A27C-9A5472E4E2AA}"
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "app", "app", "{A78D7B80-3C85-4B90-B881-0186FBB0E89E}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "demo", "demo", "{4CA8D5C0-2250-4BDB-8735-4FA3C7ED320C}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -70,14 +60,6 @@ Global
 		{217909D0-CC8B-4A02-8CE9-D06611DDA3EA}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{217909D0-CC8B-4A02-8CE9-D06611DDA3EA}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{217909D0-CC8B-4A02-8CE9-D06611DDA3EA}.Release|Any CPU.Build.0 = Release|Any CPU
-		{405C256E-7865-406C-8EBA-041A2863862A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{405C256E-7865-406C-8EBA-041A2863862A}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{405C256E-7865-406C-8EBA-041A2863862A}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{405C256E-7865-406C-8EBA-041A2863862A}.Release|Any CPU.Build.0 = Release|Any CPU
-		{90725D82-D6AF-49CF-9E51-6952813AE9F8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{90725D82-D6AF-49CF-9E51-6952813AE9F8}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{90725D82-D6AF-49CF-9E51-6952813AE9F8}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{90725D82-D6AF-49CF-9E51-6952813AE9F8}.Release|Any CPU.Build.0 = Release|Any CPU
 		{08A2EB39-FE00-4354-8106-5BECF6397D7B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{08A2EB39-FE00-4354-8106-5BECF6397D7B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{08A2EB39-FE00-4354-8106-5BECF6397D7B}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -103,18 +85,10 @@ Global
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
-		{54703720-B1E8-4A63-95B6-9E9A5B3E3CA5} = {CC7DF785-1F17-46F7-A27C-9A5472E4E2AA}
-		{A7FABA21-B019-44AB-AD01-40F8F97C31CD} = {CC7DF785-1F17-46F7-A27C-9A5472E4E2AA}
-		{217909D0-CC8B-4A02-8CE9-D06611DDA3EA} = {CC7DF785-1F17-46F7-A27C-9A5472E4E2AA}
-		{405C256E-7865-406C-8EBA-041A2863862A} = {CC7DF785-1F17-46F7-A27C-9A5472E4E2AA}
-		{90725D82-D6AF-49CF-9E51-6952813AE9F8} = {CC7DF785-1F17-46F7-A27C-9A5472E4E2AA}
-		{08A2EB39-FE00-4354-8106-5BECF6397D7B} = {A78D7B80-3C85-4B90-B881-0186FBB0E89E}
-		{9C2DB396-1970-10BD-73D1-220222949B80} = {A78D7B80-3C85-4B90-B881-0186FBB0E89E}
-		{8705EE36-06E6-16B0-28B3-48FA5810FB20} = {A78D7B80-3C85-4B90-B881-0186FBB0E89E}
-		{D950AFEE-3F0E-36E1-C227-4718498D0EAB} = {A78D7B80-3C85-4B90-B881-0186FBB0E89E}
-		{1DC4059D-93C8-2326-0A14-ED48EAA22CCF} = {0718D8AB-B625-4B41-B662-9A958F74AB37}
-		{CC7DF785-1F17-46F7-A27C-9A5472E4E2AA} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
-		{A78D7B80-3C85-4B90-B881-0186FBB0E89E} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
+		{08A2EB39-FE00-4354-8106-5BECF6397D7B} = {4CA8D5C0-2250-4BDB-8735-4FA3C7ED320C}
+		{9C2DB396-1970-10BD-73D1-220222949B80} = {4CA8D5C0-2250-4BDB-8735-4FA3C7ED320C}
+		{8705EE36-06E6-16B0-28B3-48FA5810FB20} = {4CA8D5C0-2250-4BDB-8735-4FA3C7ED320C}
+		{D950AFEE-3F0E-36E1-C227-4718498D0EAB} = {4CA8D5C0-2250-4BDB-8735-4FA3C7ED320C}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {C33304F0-2F6C-4F78-8BAD-7325098575CA}

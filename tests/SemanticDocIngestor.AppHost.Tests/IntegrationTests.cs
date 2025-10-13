@@ -1,20 +1,11 @@
 using Aspire.Hosting;
-using SemanticDocIngestor.Domain.Abstracts.Documents;
-using SemanticDocIngestor.Domain.Contracts;
-using SemanticDocIngestor.AppHost.ApiService.Models;
-using SemanticDocIngestor.Core.Ollama;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.Threading;
-using MongoDB.Bson;
-using Moq;
 using Ollama;
+using Projects;
 using System.Net.Http.Json;
-using System.Threading;
-using Xunit.v3;
 
-namespace SemanticDocIngestor.AppHost.Tests;
+namespace SemanticDocIngestor.Tests;
 
 [Collection("SequentialTests")]
 public class IntegrationTests : IAsyncLifetime
@@ -26,7 +17,7 @@ public class IntegrationTests : IAsyncLifetime
 
     async ValueTask IAsyncLifetime.InitializeAsync()
     {
-        (_appHost, _cancellationToken) = await SetupAppTestBuilder<Projects.SemanticDocIngestor_AppHost>();
+        (_appHost, _cancellationToken) = await SetupAppTestBuilder<SemanticDocIngestor_AppHost>();
     }
 
     private static async Task<(DistributedApplication app, CancellationToken cancellationToken)> SetupAppTestBuilder<T>() where T : class
@@ -101,7 +92,7 @@ public class IntegrationTests : IAsyncLifetime
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var result = await response.Content.ReadFromJsonAsync<List<Ollama.Model>>(cancellationToken: _cancellationToken);
+        var result = await response.Content.ReadFromJsonAsync<List<Model>>(cancellationToken: _cancellationToken);
         Assert.NotNull(result);
     }
 

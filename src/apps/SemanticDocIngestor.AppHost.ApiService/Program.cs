@@ -1,12 +1,12 @@
 using SemanticDocIngestor.AppHost.ServiceDefaults;
 using SemanticDocIngestor.Core;
-using SemanticDocIngestor.Middleware.Serilog;
 using Microsoft.Extensions.Options;
 using Scalar.AspNetCore;
 using Serilog;
+using SemanticDocIngestor.Infrastructure.Middlewares;
 
 var builder = WebApplication.CreateBuilder(args);
-Log.Logger = SemanticDocIngestorLoggingExtensions.AddSemanticDocIngestorLogging(builder.Configuration);
+Log.Logger = SemanticDocIngestorLoggingExtensions.AddSerilogLogging(builder.Configuration);
 
 // Add service defaults & Aspire client integrations.
 builder.AddServiceDefaults();
@@ -17,7 +17,7 @@ builder.Services.AddProblemDetails();
 builder.Services.AddControllers();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
-builder.Services.AddSemanticDocIngestorCore(builder.Configuration, useApm: false);
+builder.Services.AddSemanticDocIngestorCore(builder.Configuration);
 
 builder.Services.AddCors(options =>
 {

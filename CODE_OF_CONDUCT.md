@@ -1,4 +1,4 @@
-# Contributor Covenant Code of Conduct (short)
+# Contributor Covenant Code of Conduct
 
 SemanticDocIngestor is dedicated to providing a welcoming, inclusive project environment.
 

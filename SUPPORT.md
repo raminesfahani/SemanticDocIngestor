@@ -2,13 +2,16 @@
 
 If you need help with SemanticDocIngestor:
 
-- Check the README and docs in `/docs` (if present).
-- Open an issue on the repository describing:
+- Review the main [README](README.md) for setup, ingestion, and search guidance.
+- Check docs in `/docs` if present.
+- Open a GitHub issue describing:
   - What you tried
   - Expected behavior
   - Actual behavior
-  - Logs / stack traces / screenshots (if applicable)
+  - Repro steps
+  - Logs/stack traces/screenshots (if applicable)
+  - Environment details (OS, .NET SDK version, Elasticsearch version)
 
-For private security disclosures see `SECURITY.md`.
+For private security disclosures, see `SECURITY.md` (if present) or contact the maintainers.
 
-If you'd like commercial or prioritized support, indicate your needs in the issue and maintainers can respond with options.
+If you require commercial or prioritized support, mention it in your issue; maintainers can respond with options.

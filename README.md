@@ -6,186 +6,132 @@
 ![GitHub Repo stars](https://img.shields.io/github/stars/raminesfahani/SemanticDocIngestor?style=social)
 [![NuGet](https://img.shields.io/nuget/v/SemanticDocIngestor.Core)](https://www.nuget.org/packages/SemanticDocIngestor.Core)
 
-<img src="logo-text.png">
-<br>
+<img src="logo-text.png" alt="SemanticDocIngestor" />
 
-**SemanticDocIngestor** is a modular and extensible AI chat application and SDK platform built with .NET 9 and fully compatible with .NET Aspire.  
-It provides a Blazor-powered Web UI, Ollama model integrations, persistent chat history via MongoDB, and a flexible SDK for .NET developers to integrate and use local LLMs (like Gemma, LLaMA2, Mistral) easily and securely.
+SemanticDocIngestor is a modular .NET 9 solution and SDK for ingesting, chunking, and searching documents with hybrid search (vector + keyword). It includes a Blazor Server UI, API service, and full support for .NET Aspire.
 
 ---
 
-## 🌟 Key Features
+## Key features
 
-- ⚙️ **Fully compatible with .NET Aspire**
-- 💬 **Chat UI** 
-    - built with Blazor Server (interactive, reactive experience)
-- 🧠 **Ollama Integration** 
-  - LLM-based completion and conversation
-- 🗃 **MongoDB Chat History and caching** 
-  - for persistent and fast retrieval
-- 🔧 **SemanticDocIngestor.Core SDK** 
-  - use Ollama easily in your own .NET apps
-- 🧩 **Pluggable Middleware** 
-  - Polly-powered **Resiliency**, Circuit Breakers, and Retry logic
-- 🚀 **File Upload Support** 
-  - with base64 image preview support (for image input models)
-- 🌐 **API Endpoints** 
-  - Implemented a backend-driven project for using in every client app
-- 🧰 **Developer-Friendly** architecture — clean, testable and maintainable
+- .NET Aspire ready (local orchestration and cloud-ready)
+- Blazor Server UI for interactive ingestion and search
+- Document ingestion pipeline
+  - Robust chunking with deterministic IDs and de-duplication
+  - Hybrid storage: keyword (Elasticsearch) + vector store (Qdrant)
+  - Resilient bulk upserts with cleanup of previous versions
+- Multi-source ingestion
+  - Local files
+  - OneDrive (Microsoft Graph)
+  - Google Drive (Drive API)
+- Hybrid search
+  - Vector similarity + keyword search with optional reranking
+- SDK-first design
+  - Clean abstractions for processors, stores, and services
+- Middleware & observability
+  - Polly-based resiliency (timeouts/retries/circuit breakers), Serilog logging
+- Optional integrations
+  - Ollama for LLM usage
+  - MongoDB for chat history and caching
 
 ---
 
-## 🧠 Architecture
+## Solution layout
 
 ```
 SemanticDocIngestor/
-├── Apps/
-├──── SemanticDocIngestor.AppHost.AppHost        → .NET Aspire for orchestrating and deploying the apps on Docker, Kubernetes, or any other cloud platform.
-├──── SemanticDocIngestor.AppHost.BlazorUI        → Blazor ChatBot UI sample project using SemanticDocIngestor SDK
-├──── SemanticDocIngestor.AppHost.ApiService        → Web API sample project using SemanticDocIngestor SDK
-├── SDK/
-├──── SemanticDocIngestor.Core               → Reusable .NET SDK to interact with Ollama
-├──── SemanticDocIngestor.Middleware         → Polly-based Resiliency Middleware (retry, timeout, circuit breaker)
-├──── SemanticDocIngestor.Extensions         → Utilities, helpers and extension methods
-├──── SemanticDocIngestor.Persistence        → MongoDB chat history, caching layer, repositories and configuration
+├── src/
+│   ├── apps/
+│   │   ├── SemanticDocIngestor.AppHost.AppHost            # .NET Aspire orchestration
+│   │   ├── SemanticDocIngestor.AppHost.BlazorUI           # Blazor Server UI
+│   │   └── SemanticDocIngestor.AppHost.ApiService         # API for ingestion/search
+│   └── sdk/
+│       ├── SemanticDocIngestor.Core                       # Core SDK and services
+│       ├── SemanticDocIngestor.Infrastructure             # Integrations (Elastic, Qdrant, resolvers)
+│       └── SemanticDocIngestor.Domain                     # Abstractions & domain models
+└── tests/
+    └── SemanticDocIngestor.AppHost.Tests                  # Tests
 ```
 
 ---
 
-## 📦 Installation
+## Prerequisites
 
-### Prerequisites
-- [.NET 9 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/9.0)
-- [Ollama](https://ollama.com/) installed and running locally (for model inference)
-- [MongoDB](https://www.mongodb.com/) (locally or cloud instance)
+- .NET 9 SDK
+- Elasticsearch (keyword search)
+- Qdrant (vector search)
+- Optional: Ollama, MongoDB
+- Optional (cloud ingestion): Microsoft Entra ID app + Google OAuth app
 
-### Run the App
+---
 
-```bash
-git clone https://github.com/raminesfahani/SemanticDocIngestor.git
-cd SemanticDocIngestor/src/apps/SemanticDocIngestor.AppHost.AppHost
+## Configure
 
-# Restore dependencies and build
-dotnet restore
-dotnet build
+- Elasticsearch and Qdrant connection strings in appsettings (API/Infrastructure).
+- For cloud sources:
+  - Microsoft (OneDrive): AzureAd (Instance, Domain, TenantId, ClientId, ClientSecret, CallbackPath), scope `Files.Read`.
+  - Google (Drive): Google (ClientId, ClientSecret) with scope `https://www.googleapis.com/auth/drive.readonly`.
+- The SDK ensures the Elastic index exists and treats missing-index deletes as best-effort on first run.
 
-# Run the .NET Aspire Dashboard
-dotnet run
+---
+
+## Build & run
+
+- Build: `dotnet build`
+- Run with Aspire: start `SemanticDocIngestor.AppHost.AppHost`.
+- Or run individually: start `SemanticDocIngestor.AppHost.ApiService` and `SemanticDocIngestor.AppHost.BlazorUI`.
+
+---
+
+## Ingest documents
+
+Inputs can be local paths or cloud identifiers/links:
+
+- Local: `C:\docs\report.pdf`
+- OneDrive: `onedrive://{driveId}/{itemId}` or share links (1drv.ms/sharepoint.com)
+- Google Drive: `gdrive://{fileId}` or `https://drive.google.com/file/d/{fileId}/view`
+
+Example (SDK):
+
+```
+var inputs = new[]
+{
+    @"C:\\docs\\example.pdf",
+    "onedrive://<driveId>/<itemId>",
+    "https://drive.google.com/file/d/<fileId>/view"
+};
+await _documentIngestor.IngestDocumentsAsync(inputs, maxChunkSize: 500, cancellationToken);
 ```
 
-Then open `https://localhost:17198/` in your browser to see the .NET Aspire dashboard. You can launch Blazor ChatBot or Web API apps over there by their own links.
+The pipeline stamps a stable identity per document (Source + FilePath). Cloud sources use URI identities (e.g., `onedrive://driveId/itemId`, `gdrive://fileId`) to ensure idempotent re-ingestion.
 
 ---
 
-# SemanticDocIngestor.Core SDK
+## Search
 
-**SemanticDocIngestor.Core** is a lightweight, extensible .NET SDK designed to make working with Ollama-powered local AI models seamless and developer-friendly. It abstracts away the complexity of managing conversations, interacting with Ollama endpoints, and persisting chat history — all while offering resiliency, caching, and extensibility.
+Perform hybrid search with optional reranking:
 
-## 📦 Installation
-
-To use `SemanticDocIngestor.Core`, install the required NuGet package [![NuGet](https://img.shields.io/nuget/v/SemanticDocIngestor.Core)](https://www.nuget.org/packages/SemanticDocIngestor.Core), or include the project reference in your solution.
-
-```bash
-dotnet add package SemanticDocIngestor.Core
 ```
-
-## ✅ Sample Usage
-
-You can see [Full Documentation](src/sdk/SemanticDocIngestor.Core/README.md) and sample usage in this link as well.
-
----
-
-## 🧠 SemanticDocIngestor Blazor Chat UI
-
-The **SemanticDocIngestor Blazor App** is an intelligent, real-time chat UI built with Blazor Server and integrated with the powerful local AI models provided by Ollama using ***SemanticDocIngestor.Core SDK***.
-
-It provides a complete frontend experience for interacting with AI models, managing chat history, uploading files, and dynamically updating chat state.
-
-### ✨ Features
-
-- 🔁 Chat with Ollama Models: Seamlessly send and stream messages from local Ollama instances.
-
-- 💬 Persistent Conversations: Every chat session is stored in MongoDB and can be resumed anytime.
-
-- 📂 File Uploads: Upload image files and pass them to models like llava for multimodal interactions.
-
-- 🧭 Sidebar Navigation: Access previous chats and start new ones from a clean sidebar UI.
-
-- 📦 Model Switching: Easily switch between available Ollama models.
-
-- 🔃 Streaming Responses: Uses async streaming to display tokens as they’re generated.
-
-- ☁️ Resilient Middleware: Protected with timeout, retry, and circuit breaker policies.
-
-- 🔔 Global Error Toasts: All unhandled exceptions surface as toast notifications.
-
-## Screenshots
-
-<div><img src="assets/chat-blazor-ui/home.png" alt="SemanticDocIngestor Blazor Chat UI - Home Page"/></div>
-<br>
-<div><img src="assets/chat-blazor-ui/chat-ui.jpg" alt="SemanticDocIngestor Blazor Chat UI - Chat user interface"/></div>
-<br>
-<div><img src="assets/chat-blazor-ui/sample-conversation.jpg" alt="SemanticDocIngestor Blazor Chat UI - Sample chat"/></div>
-
----
-
-## 📡 SemanticDocIngestor WebAPI
-
-The **SemanticDocIngestor API Service** is the backend layer of the SemanticDocIngestor system, exposing RESTful HTTP APIs for external integration, orchestration, and automation.
-
-It serves as a stateless gateway for interacting with the SemanticDocIngestor core functionalities — such as chat sessions, file uploads, model management, and streaming chat completions — powered by the ***SemanticDocIngestor.Core SDK*** and ***Ollama***.
-
-### ✨ Features
-
-- 🔗 Chat Completion API: Start or continue chat sessions supporting stream mode with local Ollama models.
-
-- 🧠 Model Discovery: Query available and pulled models from the Ollama runtime.
-
-- 💬 Conversation APIs: Read, delete, and manage persistent chat history.
-
-- 🖼️ File Upload: Upload image files to be used with multimodal models (e.g., gemma).
-
-- 🔐 Middleware-Enhanced Resilience: Protected by retry, timeout, and circuit breaker policies via SemanticDocIngestor.Middleware.
-
-- ⚙️ Scalar Integration: Auto-generated OpenAPI documentation (easily added).
-
-<br>
-<div><img src="assets/web-api/api-doc.png" alt="SemanticDocIngestor Web API documentation"/></div>
-
----
-
-## 🛠️ Build and Test
-
-```bash
-dotnet build --configuration Release
-dotnet test
+var results = await _documentIngestor.SearchDocumentsAsync(
+    "quarterly revenue trend",
+    limit: 10,
+    reranker: null,
+    cancellationToken);
 ```
 
 ---
 
-## 📬 Contributing
+## Notes
 
-Contributions are welcome!
-
-1. Fork the repo and create your branch
-2. Implement your feature or fix
-3. Submit a PR with proper context
+- Elastic index creation is handled by the SDK. Delete-by-query ignores missing index on early boot.
+- Vector store uses Qdrant; configure endpoint and API key via connection string.
+- Blazor app supports delegated user auth for OneDrive/Google to list and ingest user files.
 
 ---
 
-## 📄 License
+## Contributing & support
 
-Licensed under the [MIT License](LICENSE).
+- See [CONTRIBUTING.md](CONTRIBUTING.md) and [SUPPORT.md](SUPPORT.md).
+- This project follows a [Code of Conduct](CODE_OF_CONDUCT.md).
 
----
-
-## 📣 Contact
-
-Created and maintained by [@raminesfahani](https://github.com/raminesfahani).  
-For issues and features, open a [GitHub Issue](https://github.com/raminesfahani/SemanticDocIngestor/issues).
-
----
-
-## 🙏 Acknowledgements
-
-This project uses the [Ollama repository](https://github.com/tryAGI/Ollama) for local AI model integration. I am thankful to the maintainers and contributors of Ollama for making this technology available.
+Licensed under the MIT License.
