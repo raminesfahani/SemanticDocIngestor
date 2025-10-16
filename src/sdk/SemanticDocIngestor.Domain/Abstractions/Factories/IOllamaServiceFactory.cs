@@ -8,6 +8,7 @@ namespace SemanticDocIngestor.Domain.Abstractions.Factories
     /// </summary>
     public interface IOllamaServiceFactory
     {
+        Task EnsureModelIsPulledAsync(string model, CancellationToken ct = default);
         Task<string> GetChatCompletionAsync(GenerateChatCompletionRequest request, CancellationToken ct = default);
         Task<List<float>> GetEmbeddingAsync(string input, CancellationToken ct = default);
         IAsyncEnumerable<GenerateChatCompletionResponse> GetStreamChatCompletionAsync(GenerateChatCompletionRequest request, CancellationToken ct = default);

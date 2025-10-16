@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Ollama;
 using SemanticDocIngestor.Domain.Abstractions.Factories;
@@ -28,6 +29,18 @@ namespace SemanticDocIngestor.Infrastructure.Factories.Ollama
             });
 
             return services;
+        }
+
+        public static IApplicationBuilder UseOllamaClient(this IApplicationBuilder app, IConfiguration configuration)
+        {
+            var appsettings = configuration.GetSection(nameof(Configurations.AppSettings)).Get<Configurations.AppSettings>() ?? throw new InvalidOperationException("AppSettings section is not configured properly!");
+            var ollamaFactory = app.ApplicationServices.GetRequiredService<IOllamaServiceFactory>();
+
+            // Ensure the embedding model is pulled and ready
+            ollamaFactory.EnsureModelIsPulledAsync(appsettings.Ollama.EmbeddingModel).GetAwaiter().GetResult();
+            ollamaFactory.EnsureModelIsPulledAsync(appsettings.Ollama.ChatModel).GetAwaiter().GetResult();
+
+            return app;
         }
     }
 }

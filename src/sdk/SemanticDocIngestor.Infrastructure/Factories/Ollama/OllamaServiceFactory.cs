@@ -32,8 +32,6 @@ namespace SemanticDocIngestor.Infrastructure.Factories.Ollama
                 cacheKey,
                 async cancellationToken =>
                 {
-                    await EnsureModelIsPulledAsync(_appSettings.Ollama.EmbeddingModel, ct);
-
                     var embedding = await _client.Embeddings.GenerateEmbeddingAsync(new GenerateEmbeddingRequest()
                     {
                         Model = _appSettings.Ollama.EmbeddingModel,
@@ -52,7 +50,7 @@ namespace SemanticDocIngestor.Infrastructure.Factories.Ollama
         }
 
         /// <inheritdoc />
-        private async Task EnsureModelIsPulledAsync(string model, CancellationToken ct = default)
+        public async Task EnsureModelIsPulledAsync(string model, CancellationToken ct = default)
         {
             var models = await _client.Models.ListModelsAsync(ct) ?? throw new InvalidOperationException("Failed to retrieve models from Ollama API.");
 
@@ -73,8 +71,6 @@ namespace SemanticDocIngestor.Infrastructure.Factories.Ollama
         /// <inheritdoc />
         public async Task<string> GetChatCompletionAsync(GenerateChatCompletionRequest request, CancellationToken ct = default)
         {
-            await EnsureModelIsPulledAsync(_appSettings.Ollama.ChatModel, ct);
-
             var response = "";
             await foreach (var item in _client.Chat.GenerateChatCompletionAsync(request, ct).WithCancellation(ct))
             {
@@ -86,8 +82,6 @@ namespace SemanticDocIngestor.Infrastructure.Factories.Ollama
         /// <inheritdoc />
         public async IAsyncEnumerable<GenerateChatCompletionResponse> GetStreamChatCompletionAsync(GenerateChatCompletionRequest request, [EnumeratorCancellation] CancellationToken ct = default)
         {
-            await EnsureModelIsPulledAsync(_appSettings.Ollama.ChatModel, ct);
-
             var stream = _client.Chat.GenerateChatCompletionAsync(request, ct);
 
             await foreach (var item in stream.WithCancellation(ct))

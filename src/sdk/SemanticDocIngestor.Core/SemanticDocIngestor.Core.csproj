@@ -22,10 +22,6 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <Folder Include="DTOs\" />
-	</ItemGroup>
-
-	<ItemGroup>
 	  <ProjectReference Include="..\SemanticDocIngestor.Infrastructure\SemanticDocIngestor.Infrastructure.csproj" />
 	</ItemGroup>
 

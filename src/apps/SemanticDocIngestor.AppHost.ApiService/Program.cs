@@ -45,6 +45,7 @@ if (app.Environment.IsDevelopment())
 var loggerFactory = app.Services.GetRequiredService<ILoggerFactory>();
 app.UseSemanticDocIngestorCore(app.Configuration, loggerFactory);
 
+app.UseStaticFiles();
 app.MapDefaultEndpoints();
 app.MapControllers();
 

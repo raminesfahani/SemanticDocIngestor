@@ -1,22 +1,77 @@
-﻿using SemanticDocIngestor.Domain.Abstractions.Factories;
+﻿using AutoMapper;
+using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Caching.Hybrid;
+using Microsoft.Extensions.Logging;
+using SemanticDocIngestor.Core.Hubs;
+using SemanticDocIngestor.Domain.Abstractions.Factories;
+using SemanticDocIngestor.Domain.Abstractions.Hubs;
 using SemanticDocIngestor.Domain.Abstractions.Persistence;
 using SemanticDocIngestor.Domain.Abstractions.Services;
+using SemanticDocIngestor.Domain.DTOs;
 using SemanticDocIngestor.Domain.Entities.Ingestion;
+using SemanticDocIngestor.Infrastructure.Persistence.Cache;
+using System.Collections.Generic;
 
 namespace SemanticDocIngestor.Core.Services
 {
-    public class DocumentIngestorService(IDocumentProcessor documentProcessor,
-                                  IElasticStore elasticStore,
-                                  IVectorStore vectorStore,
-                                  IEnumerable<ICloudFileResolver>? cloudResolvers = null) : IDocumentIngestorService
+    public class DocumentIngestorService : IDocumentIngestorService, IDisposable
     {
-        private readonly IDocumentProcessor _documentProcessor = documentProcessor;
-        private readonly IElasticStore _elasticStore = elasticStore;
-        private readonly IVectorStore _vectorStore = vectorStore;
-        private readonly IEnumerable<ICloudFileResolver> _resolvers = cloudResolvers ?? [];
+        private readonly IDocumentProcessor _documentProcessor;
+        private readonly IMapper _mapper;
+        private readonly IElasticStore _elasticStore;
+        private readonly IVectorStore _vectorStore;
+        private readonly HybridCache _cache;
+        private readonly IEnumerable<ICloudFileResolver> _resolvers;
+        private readonly ILogger<DocumentIngestorService> _logger;
+        private readonly IHubContext<IngestionHub, IIngestionHubClient>? _hubContext;
+
+        public DocumentIngestorService(IDocumentProcessor documentProcessor,
+                                             IMapper mapper,
+                                             IElasticStore elasticStore,
+                                             IVectorStore vectorStore,
+                                             HybridCache cache,
+                                             ILogger<DocumentIngestorService> logger,
+                                             IEnumerable<ICloudFileResolver>? cloudResolvers = null,
+                                             IHubContext<IngestionHub, IIngestionHubClient>? hubContext = null)
+        {
+            _documentProcessor = documentProcessor;
+            _mapper = mapper;
+            _logger = logger;
+            _elasticStore = elasticStore;
+            _vectorStore = vectorStore;
+            _cache = cache;
+            _resolvers = cloudResolvers ?? [];
+            _hubContext = hubContext;
+
+            OnProgress += async (s, e) => await UpdateProgressCacheAsync(e);
+            OnCompleted += async (s, e) => await UpdateProgressCacheAsync(e);
+        }
 
         public event EventHandler<IngestionProgress>? OnProgress;
         public event EventHandler<IngestionProgress>? OnCompleted;
+
+        private async Task UpdateProgressCacheAsync(IngestionProgress progress, CancellationToken cancellationToken = default)
+        {
+            await _cache.SetAsync(CacheKeyHelper.IngestionProgressKey, progress, new HybridCacheEntryOptions() { Expiration = TimeSpan.FromHours(2) }, cancellationToken: cancellationToken);
+            _logger.LogInformation("Ingestion Progress - {Completed}/{Total} - {FilePath}", progress.Completed, progress.Total, progress.FilePath);
+            
+            // Notify SignalR clients if hub context is available
+            if (_hubContext != null)
+            {
+                await _hubContext.Clients.All.ReceiveProgress(progress);
+            }
+        }
+
+        public async Task<IngestionProgress?> GetProgressAsync(CancellationToken cancellationToken = default)
+        {
+            return await _cache.GetOrCreateAsync(CacheKeyHelper.IngestionProgressKey, async (ct) =>
+            {
+                return await Task.FromResult(new IngestionProgress());
+            }, new HybridCacheEntryOptions()
+            {
+                Expiration = TimeSpan.FromHours(2)
+            }, cancellationToken: cancellationToken);
+        }
 
         public async Task IngestFolderAsync(string folderPath, CancellationToken cancellationToken = default)
         {
@@ -31,51 +86,7 @@ namespace SemanticDocIngestor.Core.Services
                          .Where(f => _documentProcessor.SupportedFileExtensions.Any(ext => f.EndsWith(ext, StringComparison.OrdinalIgnoreCase)))
                          .ToList();
 
-            int total = files.Count;
-            int completed = 0;
-
-            foreach (var file in files)
-            {
-                if (cancellationToken.IsCancellationRequested)
-                    break;
-
-                try
-                {
-                    // Pre-delete by the stable identity (local path)
-                    await _vectorStore.DeleteExistingChunksAsync(file, cancellationToken);
-                    await _elasticStore.DeleteExistingChunks(file, cancellationToken);
-
-                    var processedDoc = await _documentProcessor.ProcessDocument(file, default, cancellationToken);
-
-                    // Ensure consistent identity metadata for local files
-                    foreach (var c in processedDoc)
-                    {
-                        c.Metadata.Source = IngestionSource.Local;
-                        c.Metadata.FilePath = file;
-                    }
-
-                    await _vectorStore.UpsertAsync(processedDoc, cancellationToken);
-                    await _elasticStore.UpsertAsync(processedDoc, cancellationToken);
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Error ingesting {file}: {ex.Message}");
-                }
-
-                completed++;
-                OnProgress?.Invoke(this, new IngestionProgress
-                {
-                    FilePath = file,
-                    Completed = completed,
-                    Total = total
-                });
-            }
-
-            OnCompleted?.Invoke(this, new IngestionProgress
-            {
-                Completed = completed,
-                Total = total
-            });
+            await IngestDocumentsAsync(files, cancellationToken: cancellationToken);
         }
 
         public async Task FlushAsync(CancellationToken cancellationToken = default)
@@ -113,6 +124,14 @@ namespace SemanticDocIngestor.Core.Services
 
                 int total = plans.Count;
                 int completed = 0;
+                var initialProgress = new IngestionProgress
+                {
+                    FilePath = string.Empty,
+                    Completed = completed,
+                    Total = total
+                };
+                
+                OnProgress?.Invoke(this, initialProgress);
 
                 // Pre-delete by identity to avoid duplicates across re-ingests
                 foreach (var p in plans)
@@ -142,19 +161,29 @@ namespace SemanticDocIngestor.Core.Services
                     await _elasticStore.UpsertAsync(docChunks, cancellationToken);
 
                     completed++;
-                    OnProgress?.Invoke(this, new IngestionProgress
+                    var progressUpdate = new IngestionProgress
                     {
                         FilePath = p.IdentityPath,
                         Completed = completed,
                         Total = total
-                    });
+                    };
+                    
+                    OnProgress?.Invoke(this, progressUpdate);
                 }
 
-                OnCompleted?.Invoke(this, new IngestionProgress
+                var completedProgress = new IngestionProgress
                 {
                     Completed = plans.Count,
                     Total = plans.Count
-                });
+                };
+                
+                OnCompleted?.Invoke(this, completedProgress);
+                
+                // Notify SignalR clients about completion
+                if (_hubContext != null)
+                {
+                    await _hubContext.Clients.All.ReceiveCompleted(completedProgress);
+                }
             }
             finally
             {
@@ -169,10 +198,9 @@ namespace SemanticDocIngestor.Core.Services
             }
         }
 
-        public async Task<List<DocumentChunk>> SearchDocumentsAsync(
+        public async Task<List<DocumentChunkDto>> SearchDocumentsAsync(
             string query,
             ulong limit = 10,
-            Func<List<DocumentChunk>, List<DocumentChunk>>? reranker = null,
             CancellationToken cancellationToken = default)
         {
             if (limit == 0)
@@ -180,7 +208,6 @@ namespace SemanticDocIngestor.Core.Services
                 return [];
             }
 
-            // Run searches in parallel to minimize end-to-end latency
             var vectorTask = _vectorStore.SearchAsync(query, topK: limit, cancellationToken: cancellationToken);
             var keywordTask = _elasticStore.SearchAsync(query, size: (int)limit, ct: cancellationToken);
 
@@ -189,49 +216,23 @@ namespace SemanticDocIngestor.Core.Services
             var vectorResults = vectorTask.Result ?? [];
             var keywordResults = keywordTask.Result ?? [];
 
-            // Streamed de-duplication with early-exit to avoid full materialization and GroupBy allocations
-            int intLimit = limit > int.MaxValue ? int.MaxValue : (int)limit;
-            var results = new List<DocumentChunk>(intLimit);
-            int setCapacity = intLimit > (int.MaxValue / 2) ? int.MaxValue : Math.Max(0, intLimit * 2);
-            var seen = new HashSet<(string? Content, IngestionSource Source, string? FileName, string? FilePath, string? PageNumber)>(setCapacity);
+            List<DocumentChunk> results = [];
 
-            void Accumulate(IEnumerable<DocumentChunk> sequence)
-            {
-                foreach (var c in sequence)
-                {
-                    if (cancellationToken.IsCancellationRequested)
-                        break;
+            vectorResults.Concat(keywordResults)
+                         .GroupBy(c => new { c.Content, c.Metadata.Source, c.Metadata.FileName, c.Metadata.FilePath, c.Metadata.PageNumber }) // Deduplicate
+                         .Select(g => g.First())
+                         .Take((int)limit)
+                         .ToList()
+                         .ForEach(results.Add);
 
-                    var m = c.Metadata;
-                    var key = (c.Content, m.Source, m.FileName, m.FilePath, m.PageNumber);
+            return _mapper.Map<List<DocumentChunkDto>>(results);
+        }
 
-                    if (seen.Add(key))
-                    {
-                        results.Add(c);
-                        if (results.Count >= intLimit)
-                            break;
-                    }
-                }
-            }
-
-            // Prefer vector results; fill with keyword results as needed
-            Accumulate(vectorResults);
-            if (results.Count < intLimit)
-            {
-                Accumulate(keywordResults);
-            }
-
-            // Apply reranker if provided
-            if (reranker != null)
-            {
-                results = reranker(results);
-                if (results.Count > intLimit)
-                {
-                    results = [.. results.Take(intLimit)];
-                }
-            }
-
-            return results;
+        public void Dispose()
+        {
+            OnProgress = null;
+            OnCompleted = null;
+            GC.SuppressFinalize(this);
         }
     }
 }

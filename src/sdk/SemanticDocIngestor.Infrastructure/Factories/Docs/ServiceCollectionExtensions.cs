@@ -33,18 +33,18 @@ namespace SemanticDocIngestor.Infrastructure.Factories.Docs
             services.AddSingleton<DriveService>(sp =>
             {
                 var cfg = sp.GetRequiredService<IConfiguration>();
-                var json = cfg["Google:CredentialsJson"];
+                //var json = cfg["Google:CredentialsJson"];
                 var appName = cfg["Google:ApplicationName"] ?? "SemanticDocIngestor";
 
-                if (string.IsNullOrWhiteSpace(json))
-                    throw new InvalidOperationException("Google:CredentialsJson is not configured");
+                //if (string.IsNullOrWhiteSpace(json))
+                //    throw new InvalidOperationException("Google:CredentialsJson is not configured");
 
-                GoogleCredential credential = GoogleCredential.FromJson(json)
-                    .CreateScoped(DriveService.Scope.DriveReadonly);
+                //GoogleCredential credential = GoogleCredential.FromJson(json)
+                //    .CreateScoped(DriveService.Scope.DriveReadonly);
 
                 return new DriveService(new BaseClientService.Initializer
                 {
-                    HttpClientInitializer = credential,
+                    //HttpClientInitializer = credential,
                     ApplicationName = appName
                 });
             });

@@ -361,4 +361,5 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
-/src/SemanticDocIngestor.AppHost/SemanticDocIngestor.AppHost.BlazorUI/wwwroot/uploads/
+/src/apps/SemanticDocIngestor.AppHost.BlazorUI/wwwroot/uploads/
+/src/apps/SemanticDocIngestor.AppHost.ApiService/wwwroot/uploads/

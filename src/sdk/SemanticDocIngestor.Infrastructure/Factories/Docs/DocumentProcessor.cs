@@ -89,8 +89,8 @@ public class DocumentProcessor(IOllamaServiceFactory ollamaServiceFactory, IRagS
     private async Task<List<DocumentChunk>> ProcessDefault(string filePath, int maxChunkSize)
     {
         var content = File.ReadAllText(filePath);
-        var chunks = await _ragService.GetDocumentChunksAsync(content, default);
-        return await WrapChunks(chunks, filePath, Path.GetExtension(filePath));
+        //var chunks = await _ragService.GetDocumentChunksAsync(content, default);
+        return await WrapChunks([content], filePath, Path.GetExtension(filePath));
     }
 
     private async Task<List<DocumentChunk>> ProcessPdf(string filePath, int maxChunkSize)
@@ -104,24 +104,20 @@ public class DocumentProcessor(IOllamaServiceFactory ollamaServiceFactory, IRagS
         foreach (var page in document.GetPages())
         {
             var text = string.Join(" ", page.GetWords().Select(w => w.Text));
-            var pageChunks = await _ragService.GetDocumentChunksAsync(text, default);
 
-            foreach (var chunk in pageChunks)
+            chunks.Add(new DocumentChunk
             {
-                chunks.Add(new DocumentChunk
+                Content = text,
+                Index = globalIndex++,
+                Embedding = await GetEmbeddingsAsync(text),
+                Metadata = new IngestionMetadata
                 {
-                    Content = chunk,
-                    Index = globalIndex++,
-                    Embedding = await GetEmbeddingsAsync(chunk),
-                    Metadata = new IngestionMetadata
-                    {
-                        FileName = Path.GetFileName(filePath),
-                        FileType = ".pdf",
-                        FilePath = filePath,
-                        PageNumber = pageNum.ToString(),
-                    }
-                });
-            }
+                    FileName = Path.GetFileName(filePath),
+                    FileType = ".pdf",
+                    FilePath = filePath,
+                    PageNumber = pageNum.ToString(),
+                }
+            });
 
             pageNum++;
         }
@@ -142,9 +138,9 @@ public class DocumentProcessor(IOllamaServiceFactory ollamaServiceFactory, IRagS
             sb.AppendLine(text);
         }
 
-        var chunks = await _ragService.GetDocumentChunksAsync(sb.ToString(), default);
+        //var chunks = await _ragService.GetDocumentChunksAsync(sb.ToString(), default);
 
-        return await WrapChunks(chunks, filePath, ".docx");
+        return await WrapChunks([sb.ToString()], filePath, ".docx");
     }
 
     private async Task<List<DocumentChunk>> ProcessExcel(string filePath, int maxChunkSize)
@@ -164,9 +160,9 @@ public class DocumentProcessor(IOllamaServiceFactory ollamaServiceFactory, IRagS
             if (sheetData == null) continue;
 
             int rowIndex = 0;
+            var sheetText = new StringBuilder();
             foreach (var row in sheetData.Elements<Row>())
             {
-                var rowText = new StringBuilder();
                 foreach (var cell in row.Elements<Cell>())
                 {
                     var value = cell.CellValue?.InnerText ?? "";
@@ -175,27 +171,29 @@ public class DocumentProcessor(IOllamaServiceFactory ollamaServiceFactory, IRagS
                         value = sharedStrings.ElementAt(id).InnerText;
                     }
 
-                    rowText.Append(value).Append(' ');
+                    sheetText.Append(value).Append(' ');
                 }
 
-                var chunkContent = rowText.ToString().Trim();
-                if (!string.IsNullOrEmpty(chunkContent))
+                sheetText.AppendLine();
+            }
+
+            var chunkContent = sheetText.ToString().Trim();
+            if (!string.IsNullOrEmpty(chunkContent))
+            {
+                chunks.Add(new DocumentChunk
                 {
-                    chunks.Add(new DocumentChunk
+                    Content = chunkContent,
+                    Index = globalIndex++,
+                    Embedding = await GetEmbeddingsAsync(chunkContent),
+                    Metadata = new IngestionMetadata
                     {
-                        Content = chunkContent,
-                        Index = globalIndex++,
-                        Embedding = await GetEmbeddingsAsync(chunkContent),
-                        Metadata = new IngestionMetadata
-                        {
-                            FileName = Path.GetFileName(filePath),
-                            FileType = ".xlsx",
-                            FilePath = filePath,
-                            SheetName = sheet.Name,
-                            RowIndex = rowIndex++
-                        }
-                    });
-                }
+                        FileName = Path.GetFileName(filePath),
+                        FileType = ".xlsx",
+                        FilePath = filePath,
+                        SheetName = sheet.Name,
+                        RowIndex = rowIndex++
+                    }
+                });
             }
         }
 
@@ -205,8 +203,8 @@ public class DocumentProcessor(IOllamaServiceFactory ollamaServiceFactory, IRagS
     private async Task<List<DocumentChunk>> ProcessTextFile(string filePath, int maxChunkSize)
     {
         var content = File.ReadAllText(filePath);
-        var chunks = await _ragService.GetDocumentChunksAsync(content, default);
-        return await WrapChunks(chunks, filePath, ".txt");
+        //var chunks = await _ragService.GetDocumentChunksAsync(content, default);
+        return await WrapChunks([content], filePath, ".txt");
     }
 
     private async Task<List<DocumentChunk>> ProcessRtf(string filePath, int maxChunkSize)
@@ -216,16 +214,16 @@ public class DocumentProcessor(IOllamaServiceFactory ollamaServiceFactory, IRagS
         content = Regex.Replace(content, @"[{\}]", "");
         content = Regex.Replace(content, @"\s+", " ");
 
-        var chunks = await _ragService.GetDocumentChunksAsync(content.Trim(), default);
-        return await WrapChunks(chunks, filePath, ".rtf");
+        //var chunks = await _ragService.GetDocumentChunksAsync(content.Trim(), default);
+        return await WrapChunks([content], filePath, ".rtf");
     }
 
     private async Task<List<DocumentChunk>> ProcessHtml(string filePath, int maxChunkSize)
     {
         var html = File.ReadAllText(filePath);
         var plain = Regex.Replace(html, @"<[^>]+>", " ");
-        var chunks = await _ragService.GetDocumentChunksAsync(plain.Trim(), default);
-        return await WrapChunks(chunks, filePath, ".html");
+        //var chunks = await _ragService.GetDocumentChunksAsync(plain.Trim(), default);
+        return await WrapChunks([plain], filePath, ".html");
     }
 
     private async Task<List<DocumentChunk>> ProcessImage(string filePath, int maxChunkSize)

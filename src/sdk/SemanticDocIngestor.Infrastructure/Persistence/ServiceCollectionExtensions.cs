@@ -10,8 +10,6 @@ using SemanticDocIngestor.Domain.Abstractions.Settings;
 using SemanticDocIngestor.Domain.Constants;
 using SemanticDocIngestor.Domain.Options;
 using SemanticDocIngestor.Infrastructure.Persistence.ElasticSearch;
-using SemanticDocIngestor.Infrastructure.Persistence.MongoDB.Repository;
-using SemanticDocIngestor.Infrastructure.Persistence.MongoDB.Settings;
 using SemanticDocIngestor.Infrastructure.Persistence.VectorDB;
 using System;
 using System.Collections.Generic;
@@ -26,18 +24,6 @@ namespace SemanticDocIngestor.Infrastructure.Persistence
         public static IServiceCollection AddCache(this IServiceCollection services)
         {
             services.AddHybridCache();
-            return services;
-        }
-
-        public static IServiceCollection AddMongoDb(this IServiceCollection services, IConfiguration configuration)
-        {
-            services.Configure<MongoDbSettings>(settings => configuration.GetSection(nameof(MongoDbSettings)).Bind(settings));
-
-            services.AddSingleton<IMongoDbSettings>(serviceProvider =>
-                serviceProvider.GetRequiredService<IOptions<MongoDbSettings>>().Value);
-
-            services.AddScoped(typeof(IMongoRepository<>), typeof(MongoRepository<>));
-
             return services;
         }
 
@@ -62,7 +48,7 @@ namespace SemanticDocIngestor.Infrastructure.Persistence
             services.AddSingleton(new ElasticsearchClient(new Uri(connectionString ??
                 throw new ArgumentNullException("Elastic search connection string is not configured!"))));
 
-            services.AddSingleton<IElasticStore, ElasticDocumentStore>();
+            services.AddSingleton<IElasticStore, ElasticStore>();
 
             return services;
         }

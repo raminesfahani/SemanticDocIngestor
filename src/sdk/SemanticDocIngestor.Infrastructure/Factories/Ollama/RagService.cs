@@ -3,6 +3,7 @@ using Newtonsoft.Json;
 using Ollama;
 using SemanticDocIngestor.Domain.Abstractions.Factories;
 using SemanticDocIngestor.Domain.Abstractions.Services;
+using SemanticDocIngestor.Domain.DTOs;
 using SemanticDocIngestor.Domain.Entities.Ingestion;
 using SemanticDocIngestor.Infrastructure.Configurations;
 
@@ -14,7 +15,7 @@ namespace SemanticDocIngestor.Infrastructure.Factories.Ollama
         private readonly AppSettings _settings = options.Value;
         private readonly IOllamaServiceFactory _ollamaServiceFactory = ollamaServiceFactory;
 
-        public async Task<string> GetAnswerAsync(string question, List<DocumentChunk> contextChunks, CancellationToken cancellationToken)
+        public async Task<string> GetAnswerAsync(string question, List<DocumentChunkDto> contextChunks, CancellationToken cancellationToken)
         {
             var request = new GenerateChatCompletionRequest()
             {

@@ -1,5 +1,6 @@
 ﻿using Elastic.Clients.Elasticsearch;
 using Elastic.Clients.Elasticsearch.Core.Bulk;
+using Elastic.Clients.Elasticsearch.IndexManagement;
 using Elastic.Clients.Elasticsearch.QueryDsl;
 using Microsoft.Extensions.Options;
 using SemanticDocIngestor.Domain.Abstractions.Persistence;
@@ -11,7 +12,7 @@ using System.Text;
 
 namespace SemanticDocIngestor.Infrastructure.Persistence.ElasticSearch
 {
-    public class ElasticDocumentStore(ElasticsearchClient client, IOptions<AppSettings> options) : IElasticStore
+    public class ElasticStore(ElasticsearchClient client, IOptions<AppSettings> options) : IElasticStore
     {
         private readonly ElasticsearchClient _client = client;
         private readonly string _indexName = options.Value.Elastic.IndexName;
@@ -30,15 +31,14 @@ namespace SemanticDocIngestor.Infrastructure.Persistence.ElasticSearch
         public async Task<bool> DeleteCollectionAsync(CancellationToken cancellationToken = default)
         {
             var response = await _client.Indices.DeleteAsync(_indexName, cancellationToken: cancellationToken);
-
-            if (!response.IsValidResponse && response.IsSuccess())
-                throw new InvalidOperationException($"Failed to delete index '{_indexName}': {response.DebugInformation}");
-
             return response.IsValidResponse && response.IsSuccess();
         }
 
         public async Task<bool> UpsertAsync(DocumentChunk chunk, CancellationToken ct = default)
         {
+            if (chunk is null || chunk.Embedding == null || string.IsNullOrWhiteSpace(chunk.Content))
+                return false;
+
             var id = BuildChunkId(chunk);
             var response = await _client.IndexAsync(chunk, d => d
                 .Index(_indexName)
@@ -62,7 +62,7 @@ namespace SemanticDocIngestor.Infrastructure.Persistence.ElasticSearch
                 Refresh = Refresh.WaitFor
             };
 
-            foreach (var c in chunks)
+            foreach (var c in chunks.Where(x => x.Embedding != null && !string.IsNullOrWhiteSpace(x.Content)))
             {
                 var op = new BulkIndexOperation<DocumentChunk>(c)
                 {
@@ -70,6 +70,9 @@ namespace SemanticDocIngestor.Infrastructure.Persistence.ElasticSearch
                 };
                 bulk.Operations.Add(op);
             }
+
+            if (bulk.Operations.Count == 0)
+                return true;
 
             var response = await _client.BulkAsync(bulk, ct);
             if (!response.IsValidResponse || response.Errors)

@@ -43,6 +43,9 @@ namespace SemanticDocIngestor.Infrastructure.Persistence.VectorDB
 
         public async Task<bool> DeleteCollectionAsync(CancellationToken cancellationToken = default)
         {
+            if (!await _client.CollectionExistsAsync(_settings.CollectionName, cancellationToken))
+                return false;
+
             await _client.DeleteCollectionAsync(_settings.CollectionName, cancellationToken: cancellationToken);
             return true;
         }
@@ -61,7 +64,7 @@ namespace SemanticDocIngestor.Infrastructure.Persistence.VectorDB
                 var fileChunks = fileGroup.ToList();
 
                 // Insert new chunks for this file
-                var points = fileChunks.Where(x => x.Embedding != null).Select(chunk =>
+                var points = fileChunks.Where(x => x.Embedding != null && !string.IsNullOrWhiteSpace(x.Content)).Select(chunk =>
                 {
                     return new PointStruct()
                     {

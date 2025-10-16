@@ -1,4 +1,5 @@
-﻿using SemanticDocIngestor.Domain.Entities.Ingestion;
+﻿using SemanticDocIngestor.Domain.DTOs;
+using SemanticDocIngestor.Domain.Entities.Ingestion;
 using System.Text;
 
 namespace SemanticDocIngestor.Infrastructure.Factories.Ollama
@@ -10,22 +11,18 @@ namespace SemanticDocIngestor.Infrastructure.Factories.Ollama
 
                     ANSWERING POLICY:
                     - Carefully review ALL chunks for relevant information, including paraphrases and synonyms.
-                    - Synthesize information across multiple chunks when needed to answer the question.
-                    - If any chunk contains directly relevant evidence, answer concisely using that evidence.
-                    - Cite supporting chunks by their numbers using [Chunk n] markers after the sentences they support (e.g., [Chunk 2]).
-                    - Quote brief phrases when they are decisive, but do not copy entire chunks.
-                    - Avoid hedging or speculation. Be precise and concise.
-
-                    WHEN TO DECLARE UNKNOWN:
-                    - Only use the unknown response if, after reviewing all chunks, there is no directly relevant evidence to answer the question.
-                    - The unknown response must be EXACTLY:
-                      Based on the provided documents, I don't have sufficient information to answer this question.
-                      Do not add any other text before or after this sentence.
-
-                    OUTPUT:
-                    - Provide your concise answer first.
-                    - On a new line, output: Citations: [Chunk x][, [Chunk y] ...]
-                      Omit the Citations line only if you used the unknown response.
+                    - Prioritize chunks with direct relevance to the question.
+                    - If any chunk contains directly relevant information, answer concisely using that information.
+                    - If multiple chunks provide relevant information, synthesize a comprehensive answer.
+                    - Do not reference chunk numbers or metadata in your answer.
+                    - If no chunks are relevant, respond with "The provided document chunks do not contain information relevant to the question." in the same language as the question
+                    - Don't copy text verbatim; synthesize a concise answer.
+                    - If multiple chunks provide relevant but conflicting information, note the discrepancy and summarize the differing viewpoints.
+                    - Always answer in the same language as the question.
+                    - If the question is vague or ambiguous, answer based on the most likely interpretation supported by the chunks.
+                    - If the question is unrelated to the document chunks, respond with "The provided document chunks do not contain information relevant to the question." in the same language as the question.
+                    - Use proper grammar and spelling.
+                    - If the question is a yes/no question and the answer is contained in the chunks, respond with "Yes" or "No" only.
 
                     Document Chunks:
                     {{$context}}
@@ -64,14 +61,14 @@ namespace SemanticDocIngestor.Infrastructure.Factories.Ollama
         // New: Options for building a chunking prompt
         public sealed class ChunkingPromptOptions
         {
-            public int MaxCharactersPerChunk { get; init; } = 500;
-            public int OverlapCharacters { get; init; } = 100; // ~20% of default 500
+            public int MaxCharactersPerChunk { get; init; } = 1000;
+            public int OverlapCharacters { get; init; } = 200; // ~20% of default 
             public bool PreferSentenceBoundaries { get; init; } = true;
             public bool NormalizeWhitespace { get; init; } = true;
             public bool TrimWhitespace { get; init; } = true;
         }
 
-        public static string Build(List<DocumentChunk> contextChunks, string question)
+        public static string Build(List<DocumentChunkDto> contextChunks, string question)
         {
             if (contextChunks == null || contextChunks.Count == 0)
             {
@@ -90,17 +87,14 @@ namespace SemanticDocIngestor.Infrastructure.Factories.Ollama
                 var chunkNumber = i + 1;
                 var metadata = chunk.Metadata;
 
-                // Add chunk header with minimal metadata
+                // Add chunk header with metadata including file path (to enable path-aware citations)
+                contextBuilder.AppendLine($"--- Document Chunk {chunkNumber} ---");
                 if (metadata != null)
                 {
-                    contextBuilder.AppendLine($"--- Document Chunk {chunkNumber} ---");
                     contextBuilder.AppendLine($"Source: {metadata.FileName ?? "Unknown"}" +
-                                            (metadata.PageNumber != null ? $" (Page {metadata.PageNumber})" : "") +
-                                            (metadata.SectionTitle != null ? $" - {metadata.SectionTitle}" : ""));
-                }
-                else
-                {
-                    contextBuilder.AppendLine($"--- Document Chunk {chunkNumber} ---");
+                                              (metadata.PageNumber != null ? $" (Page {metadata.PageNumber})" : "") +
+                                              (metadata.SectionTitle != null ? $" - {metadata.SectionTitle}" : "") +
+                                              (string.IsNullOrEmpty(metadata.FilePath) == false ? $" - FilePath: {metadata.FilePath}" : ""));
                 }
 
                 // Add content

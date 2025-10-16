@@ -44,13 +44,16 @@ namespace SemanticDocIngestor.Infrastructure
             return services;
         }
 
-        public static IApplicationBuilder UseInfrastructure(this IApplicationBuilder app, IConfiguration Configuration, ILoggerFactory loggerFactory)
+        public static IApplicationBuilder UseInfrastructure(this IApplicationBuilder app, IConfiguration configuration, ILoggerFactory loggerFactory)
         {
             // Use Serilog Logging
-            app.UseLogging(Configuration, loggerFactory);
+            app.UseLogging(configuration, loggerFactory);
             
             // Use Middleware
             app.UseMiddlewares();
+
+            // Use Ollama client factory
+            app.UseOllamaClient(configuration);
 
             return app;
         }
