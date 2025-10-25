@@ -4,6 +4,8 @@ on:
   push:
     branches:
     - main  # Trigger on push to main branch
+    - master
+    - development
   workflow_dispatch:  # Allow manual trigger from GitHub UI
 
 jobs:
