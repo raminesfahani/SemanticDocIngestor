@@ -10,22 +10,22 @@
         /// Document from the local file system.
         /// </summary>
         Local,
-        
+
         /// <summary>
         /// Document from Google Drive cloud storage.
         /// </summary>
         GoogleDrive,
-        
+
         /// <summary>
         /// Document from Microsoft SharePoint.
         /// </summary>
         SharePoint,
-    
+
         /// <summary>
         /// Document from Microsoft OneDrive cloud storage.
         /// </summary>
         OneDrive,
-        
+
         /// <summary>
         /// Document from Dropbox cloud storage.
         /// </summary>

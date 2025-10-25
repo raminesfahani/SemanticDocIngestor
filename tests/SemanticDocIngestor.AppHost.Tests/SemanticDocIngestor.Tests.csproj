@@ -24,6 +24,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\apps\SemanticDocIngestor.AppHost.ApiService\SemanticDocIngestor.AppHost.ApiService.csproj" />
     <ProjectReference Include="..\..\src\apps\SemanticDocIngestor.AppHost\SemanticDocIngestor.AppHost.csproj" />
+    <ProjectReference Include="..\..\src\sdk\SemanticDocIngestor.Core\SemanticDocIngestor.Core.csproj" />
   </ItemGroup>
 
   <ItemGroup>

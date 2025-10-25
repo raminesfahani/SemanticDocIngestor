@@ -15,7 +15,7 @@ namespace SemanticDocIngestor.Domain.Abstractions.Hubs
         /// <param name="progress">Current ingestion progress with completed and total counts.</param>
         /// <returns>A task representing the asynchronous notification operation.</returns>
         Task ReceiveProgress(IngestionProgress progress);
-        
+
         /// <summary>
         /// Receives notification when document ingestion completes.
         /// Called once at the end of the ingestion process with final statistics.
@@ -23,7 +23,7 @@ namespace SemanticDocIngestor.Domain.Abstractions.Hubs
         /// <param name="progress">Final ingestion progress with completion details.</param>
         /// <returns>A task representing the asynchronous notification operation.</returns>
         Task ReceiveCompleted(IngestionProgress progress);
-        
+
         /// <summary>
         /// Receives general messages from the ingestion process.
         /// Can be used for status updates, warnings, or informational messages.

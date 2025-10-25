@@ -48,7 +48,7 @@ namespace SemanticDocIngestor.Infrastructure
         {
             // Use Serilog Logging
             app.UseLogging(configuration, loggerFactory);
-            
+
             // Use Middleware
             app.UseMiddlewares();
 

@@ -80,7 +80,7 @@ namespace SemanticDocIngestor.Core.Services
         {
             await _cache.SetAsync(CacheKeyHelper.IngestionProgressKey, progress, new HybridCacheEntryOptions() { Expiration = TimeSpan.FromHours(2) }, cancellationToken: cancellationToken);
             _logger.LogInformation("Ingestion Progress - {Completed}/{Total} - {FilePath}", progress.Completed, progress.Total, progress.FilePath);
-            
+
             // Notify SignalR clients if hub context is available
             if (_hubContext != null)
             {
@@ -168,7 +168,7 @@ namespace SemanticDocIngestor.Core.Services
                     Completed = completed,
                     Total = total
                 };
-                
+
                 OnProgress?.Invoke(this, initialProgress);
 
                 // Pre-delete by identity to avoid duplicates across re-ingests
@@ -205,7 +205,7 @@ namespace SemanticDocIngestor.Core.Services
                         Completed = completed,
                         Total = total
                     };
-                    
+
                     OnProgress?.Invoke(this, progressUpdate);
                 }
 
@@ -214,9 +214,9 @@ namespace SemanticDocIngestor.Core.Services
                     Completed = plans.Count,
                     Total = plans.Count
                 };
-                
+
                 OnCompleted?.Invoke(this, completedProgress);
-                
+
                 // Notify SignalR clients about completion
                 if (_hubContext != null)
                 {

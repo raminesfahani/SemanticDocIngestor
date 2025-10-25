@@ -11,12 +11,12 @@
         /// Empty string if no specific file is being processed.
         /// </summary>
         public string FilePath { get; set; } = string.Empty;
-        
+
         /// <summary>
         /// Gets or sets the number of documents that have been successfully processed.
         /// </summary>
         public int Completed { get; set; } = 0;
-        
+
         /// <summary>
         /// Gets or sets the total number of documents to be processed in this ingestion operation.
         /// </summary>
