@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.Logging;
@@ -9,11 +10,18 @@ using SemanticDocIngestor.Domain.Abstractions.Persistence;
 using SemanticDocIngestor.Domain.Abstractions.Services;
 using SemanticDocIngestor.Domain.DTOs;
 using SemanticDocIngestor.Domain.Entities.Ingestion;
+using SemanticDocIngestor.Infrastructure.Factories.Ollama;
 using SemanticDocIngestor.Infrastructure.Persistence.Cache;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 
 namespace SemanticDocIngestor.Core.Services
 {
+    /// <summary>
+    /// Primary implementation of document ingestion service providing hybrid search and RAG capabilities.
+    /// Orchestrates document processing, chunking, embedding generation, and storage in both vector and keyword stores.
+    /// Supports multi-source ingestion from local files, OneDrive, and Google Drive with real-time progress tracking.
+    /// </summary>
     public class DocumentIngestorService : IDocumentIngestorService, IDisposable
     {
         private readonly IDocumentProcessor _documentProcessor;
@@ -24,12 +32,26 @@ namespace SemanticDocIngestor.Core.Services
         private readonly IEnumerable<ICloudFileResolver> _resolvers;
         private readonly ILogger<DocumentIngestorService> _logger;
         private readonly IHubContext<IngestionHub, IIngestionHubClient>? _hubContext;
+        private readonly IRagService _ragService;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="DocumentIngestorService"/> class.
+        /// </summary>
+        /// <param name="documentProcessor">Service for processing and chunking documents.</param>
+        /// <param name="mapper">AutoMapper instance for DTO/entity mapping.</param>
+        /// <param name="elasticStore">Elasticsearch store for keyword search.</param>
+        /// <param name="vectorStore">Qdrant vector store for semantic search.</param>
+        /// <param name="cache">Hybrid cache for storing progress and temporary data.</param>
+        /// <param name="ragService">RAG service for generating AI-powered answers.</param>
+        /// <param name="logger">Logger instance for diagnostic logging.</param>
+        /// <param name="cloudResolvers">Optional collection of cloud file resolvers for OneDrive, Google Drive, etc.</param>
+        /// <param name="hubContext">Optional SignalR hub context for real-time progress notifications.</param>
         public DocumentIngestorService(IDocumentProcessor documentProcessor,
                                              IMapper mapper,
                                              IElasticStore elasticStore,
                                              IVectorStore vectorStore,
                                              HybridCache cache,
+                                             IRagService ragService,
                                              ILogger<DocumentIngestorService> logger,
                                              IEnumerable<ICloudFileResolver>? cloudResolvers = null,
                                              IHubContext<IngestionHub, IIngestionHubClient>? hubContext = null)
@@ -40,6 +62,7 @@ namespace SemanticDocIngestor.Core.Services
             _elasticStore = elasticStore;
             _vectorStore = vectorStore;
             _cache = cache;
+            _ragService = ragService;
             _resolvers = cloudResolvers ?? [];
             _hubContext = hubContext;
 
@@ -50,6 +73,9 @@ namespace SemanticDocIngestor.Core.Services
         public event EventHandler<IngestionProgress>? OnProgress;
         public event EventHandler<IngestionProgress>? OnCompleted;
 
+        /// <summary>
+        /// Updates the ingestion progress in cache and notifies SignalR clients.
+        /// </summary>
         private async Task UpdateProgressCacheAsync(IngestionProgress progress, CancellationToken cancellationToken = default)
         {
             await _cache.SetAsync(CacheKeyHelper.IngestionProgressKey, progress, new HybridCacheEntryOptions() { Expiration = TimeSpan.FromHours(2) }, cancellationToken: cancellationToken);
@@ -62,6 +88,9 @@ namespace SemanticDocIngestor.Core.Services
             }
         }
 
+        /// <summary>
+        /// Gets the current ingestion progress.
+        /// </summary>
         public async Task<IngestionProgress?> GetProgressAsync(CancellationToken cancellationToken = default)
         {
             return await _cache.GetOrCreateAsync(CacheKeyHelper.IngestionProgressKey, async (ct) =>
@@ -73,6 +102,9 @@ namespace SemanticDocIngestor.Core.Services
             }, cancellationToken: cancellationToken);
         }
 
+        /// <summary>
+        /// Ingests all documents from the specified folder path.
+        /// </summary>
         public async Task IngestFolderAsync(string folderPath, CancellationToken cancellationToken = default)
         {
             if (!Directory.Exists(folderPath))
@@ -80,7 +112,7 @@ namespace SemanticDocIngestor.Core.Services
 
             // Ensure backing stores exist before any operations to avoid index/collection missing errors
             await _vectorStore.EnsureCollectionExistsAsync();
-            await _elasticStore.EnsureIndexExistsAsync();
+            await _elasticStore.EnsureSemanticDocIndexExistsAsync();
 
             var files = Directory.EnumerateFiles(folderPath, "*.*", SearchOption.AllDirectories)
                          .Where(f => _documentProcessor.SupportedFileExtensions.Any(ext => f.EndsWith(ext, StringComparison.OrdinalIgnoreCase)))
@@ -89,17 +121,23 @@ namespace SemanticDocIngestor.Core.Services
             await IngestDocumentsAsync(files, cancellationToken: cancellationToken);
         }
 
+        /// <summary>
+        /// Flushes (deletes) all data in the vector and elastic stores.
+        /// </summary>
         public async Task FlushAsync(CancellationToken cancellationToken = default)
         {
             await _vectorStore.DeleteCollectionAsync(cancellationToken);
             await _elasticStore.DeleteCollectionAsync(cancellationToken);
         }
 
+        /// <summary>
+        /// Ingests multiple documents specified by their paths.
+        /// </summary>
         public async Task IngestDocumentsAsync(IEnumerable<string> documentPaths, int maxChunkSize = 500, CancellationToken cancellationToken = default)
         {
             // Ensure backing stores exist before any operations to prevent 404 on delete-by-query/index
             await _vectorStore.EnsureCollectionExistsAsync();
-            await _elasticStore.EnsureIndexExistsAsync();
+            await _elasticStore.EnsureSemanticDocIndexExistsAsync();
 
             // Resolve each input into a processing plan (local path or cloud temp download with stable identity)
             var plans = new List<(string LocalPath, string IdentityPath, IngestionSource Source, IAsyncDisposable? Lease)>();
@@ -198,6 +236,9 @@ namespace SemanticDocIngestor.Core.Services
             }
         }
 
+        /// <summary>
+        /// Searches for documents matching the specified query.
+        /// </summary>
         public async Task<List<DocumentChunkDto>> SearchDocumentsAsync(
             string query,
             ulong limit = 10,
@@ -228,6 +269,50 @@ namespace SemanticDocIngestor.Core.Services
             return _mapper.Map<List<DocumentChunkDto>>(results);
         }
 
+        /// <summary>
+        /// Searches for documents and generates a RAG response.
+        /// </summary>
+        public async Task<SearchAndGetRagResponseDto> SearchAndGetRagResponseAsync(string search = "", ulong limit = 5, CancellationToken cancellationToken = default)
+        {
+            var contextChunks = await SearchDocumentsAsync(search, limit: limit, cancellationToken: cancellationToken);
+            var ragResponse = await _ragService.GetAnswerAsync(search, contextChunks, cancellationToken: cancellationToken);
+
+            return new SearchAndGetRagResponseDto
+            {
+                Answer = ragResponse,
+                ReferencesPath = contextChunks?.GroupBy(c => c.Metadata.FilePath)
+                                               .ToDictionary(g => g.Key ?? "", g => g.ToList()) ?? []
+            };
+        }
+
+        /// <summary>
+        /// Searches for documents and generates a streaming RAG response.
+        /// </summary>
+        public async Task<SearchAndGetRagStreamingResponseDto> SearchAndGetRagStreamResponseAsync(string search = "", ulong limit = 5, CancellationToken cancellationToken = default)
+        {
+            var contextChunks = await SearchDocumentsAsync(search, limit: limit, cancellationToken: cancellationToken);
+            var ragResponse = _ragService.GetStreamingAnswer(search, contextChunks, cancellationToken: cancellationToken);
+
+            return new SearchAndGetRagStreamingResponseDto
+            {
+                Answer = ragResponse,
+                ReferencesPath = contextChunks?.GroupBy(c => c.Metadata.FilePath)
+                                               .ToDictionary(g => g.Key ?? "", g => g.ToList()) ?? []
+            };
+        }
+
+        /// <summary>
+        /// Lists all ingested documents.
+        /// </summary>
+        public async Task<List<DocumentRepoItemDto>> ListIngestedDocumentsAsync(CancellationToken cancellationToken = default)
+        {
+            var ingestedDocs = await _elasticStore.GetIngestedDocumentsAsync(cancellationToken);
+            return _mapper.Map<List<DocumentRepoItemDto>>(ingestedDocs);
+        }
+
+        /// <summary>
+        /// Disposes of event handlers to prevent memory leaks.
+        /// </summary>
         public void Dispose()
         {
             OnProgress = null;

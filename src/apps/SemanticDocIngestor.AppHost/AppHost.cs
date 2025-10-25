@@ -1,4 +1,5 @@
-﻿var builder = DistributedApplication.CreateBuilder(args);
+﻿
+var builder = DistributedApplication.CreateBuilder(args);
 
 // Getting ElasticSearch parameters from env
 var elasticPassword = builder.AddParameter("elastic-password");
@@ -27,15 +28,5 @@ builder.AddProject<Projects.SemanticDocIngestor_AppHost_ApiService>("SemanticDoc
                 .WaitFor(qdrant)
                 .WithReference(ollama)
                 .WaitFor(ollama);
-
-//builder.AddProject<Projects.SemanticDocIngestor_AppHost_BlazorUI>("SemanticDocIngestor-ui")
-//        .WithExternalHttpEndpoints()
-//        .WithHttpHealthCheck("/health")
-//        .WithReference(mongo)
-//        .WaitFor(mongo)
-//        .WithReference(qdrant)
-//        .WaitFor(qdrant)
-//        .WithReference(ollama)
-//        .WaitFor(ollama);
 
 builder.Build().Run();

@@ -2,6 +2,7 @@
 {
     public class ElasticOptions
     {
-        public string IndexName { get; set; } = "semantic_docs";
+        public string SemanticDocIndexName { get; set; } = "semantic_docs";
+        public string DocRepoIndexName { get; set; } = "docs_repo";
     }
 }

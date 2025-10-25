@@ -33,6 +33,25 @@ namespace SemanticDocIngestor.Infrastructure.Factories.Ollama
             return await _ollamaServiceFactory.GetChatCompletionAsync(request, ct: cancellationToken);
         }
 
+        public IAsyncEnumerable<GenerateChatCompletionResponse> GetStreamingAnswer(string question, List<DocumentChunkDto> contextChunks, CancellationToken cancellationToken)
+        {
+            var request = new GenerateChatCompletionRequest()
+            {
+                Model = _settings.Ollama.ChatModel,
+                Stream = true,
+                Messages =
+                [
+                    new ()
+                    {
+                        Role = MessageRole.System,
+                        Content = RagPromptBuilder.Build(contextChunks, question)
+                    }
+                ],
+            };
+
+            return _ollamaServiceFactory.GetStreamChatCompletionAsync(request, ct: cancellationToken);
+        }
+
         public async Task<List<string>> GetDocumentChunksAsync(string content, CancellationToken cancellationToken)
         {
             var request = new GenerateChatCompletionRequest()

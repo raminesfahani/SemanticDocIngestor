@@ -36,8 +36,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SemanticDocIngestor.AppHost
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SemanticDocIngestor.AppHost.ApiService", "src\apps\SemanticDocIngestor.AppHost.ApiService\SemanticDocIngestor.AppHost.ApiService.csproj", "{8705EE36-06E6-16B0-28B3-48FA5810FB20}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SemanticDocIngestor.AppHost.BlazorUI", "src\apps\SemanticDocIngestor.AppHost.BlazorUI\SemanticDocIngestor.AppHost.BlazorUI.csproj", "{D950AFEE-3F0E-36E1-C227-4718498D0EAB}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SemanticDocIngestor.Tests", "tests\SemanticDocIngestor.AppHost.Tests\SemanticDocIngestor.Tests.csproj", "{1DC4059D-93C8-2326-0A14-ED48EAA22CCF}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "demo", "demo", "{4CA8D5C0-2250-4BDB-8735-4FA3C7ED320C}"
@@ -72,10 +70,6 @@ Global
 		{8705EE36-06E6-16B0-28B3-48FA5810FB20}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{8705EE36-06E6-16B0-28B3-48FA5810FB20}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{8705EE36-06E6-16B0-28B3-48FA5810FB20}.Release|Any CPU.Build.0 = Release|Any CPU
-		{D950AFEE-3F0E-36E1-C227-4718498D0EAB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{D950AFEE-3F0E-36E1-C227-4718498D0EAB}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{D950AFEE-3F0E-36E1-C227-4718498D0EAB}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{D950AFEE-3F0E-36E1-C227-4718498D0EAB}.Release|Any CPU.Build.0 = Release|Any CPU
 		{1DC4059D-93C8-2326-0A14-ED48EAA22CCF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{1DC4059D-93C8-2326-0A14-ED48EAA22CCF}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1DC4059D-93C8-2326-0A14-ED48EAA22CCF}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -88,7 +82,6 @@ Global
 		{08A2EB39-FE00-4354-8106-5BECF6397D7B} = {4CA8D5C0-2250-4BDB-8735-4FA3C7ED320C}
 		{9C2DB396-1970-10BD-73D1-220222949B80} = {4CA8D5C0-2250-4BDB-8735-4FA3C7ED320C}
 		{8705EE36-06E6-16B0-28B3-48FA5810FB20} = {4CA8D5C0-2250-4BDB-8735-4FA3C7ED320C}
-		{D950AFEE-3F0E-36E1-C227-4718498D0EAB} = {4CA8D5C0-2250-4BDB-8735-4FA3C7ED320C}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {C33304F0-2F6C-4F78-8BAD-7325098575CA}

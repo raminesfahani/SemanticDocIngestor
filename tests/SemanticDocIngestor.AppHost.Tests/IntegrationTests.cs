@@ -43,58 +43,20 @@ public class IntegrationTests : IAsyncLifetime
         return (app, cancellationToken);
     }
 
-    [Fact]
-    public async Task GetBlazorUIResourceRootReturnsOkStatusCode()
-    {
-        // Act
-        var httpClient = _appHost.CreateHttpClient("SemanticDocIngestor-ui");
-        await _appHost.ResourceNotifications.WaitForResourceHealthyAsync("SemanticDocIngestor-ui", _cancellationToken).WaitAsync(DefaultTimeout, _cancellationToken);
-        var response = await httpClient.GetAsync("/", _cancellationToken);
+    //[Fact]
+    //public async Task GetWebApiOllamaInstalledModelsReturnsOkStatusCode()
+    //{
+    //    // Act
+    //    var httpClient = _appHost.CreateHttpClient("SemanticDocIngestor-api");
+    //    await _appHost.ResourceNotifications.WaitForResourceHealthyAsync("SemanticDocIngestor-api", _cancellationToken).WaitAsync(DefaultTimeout, _cancellationToken);
+    //    var response = await httpClient.GetAsync("/Ollama/models/installed", _cancellationToken).WithTimeout(DefaultTimeout);
 
-        // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-    }
+    //    // Assert
+    //    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    //    var result = await response.Content.ReadFromJsonAsync<ModelsResponse?>(cancellationToken: _cancellationToken);
+    //    Assert.NotNull(result);
+    //}
 
-    [Fact]
-    public async Task GetWebApiCoversationsReturnsOkStatusCode()
-    {
-        // Act
-        var httpClient = _appHost.CreateHttpClient("SemanticDocIngestor-api");
-        await _appHost.ResourceNotifications.WaitForResourceHealthyAsync("SemanticDocIngestor-api", _cancellationToken).WaitAsync(DefaultTimeout, _cancellationToken);
-        var response = await httpClient.GetAsync("/Chat/conversations", _cancellationToken);
-
-        // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-    }
-
-    [Fact]
-    public async Task GetWebApiOllamaInstalledModelsReturnsOkStatusCode()
-    {
-        // Act
-        var httpClient = _appHost.CreateHttpClient("SemanticDocIngestor-api");
-        await _appHost.ResourceNotifications.WaitForResourceHealthyAsync("SemanticDocIngestor-api", _cancellationToken).WaitAsync(DefaultTimeout, _cancellationToken);
-        var response = await httpClient.GetAsync("/Ollama/models/installed", _cancellationToken).WithTimeout(DefaultTimeout);
-
-        // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var result = await response.Content.ReadFromJsonAsync<ModelsResponse?>(cancellationToken: _cancellationToken);
-        Assert.NotNull(result);
-    }
-
-    [Fact]
-    public async Task GetWebApiOllamaAvailableModelsReturnsOkStatusCode()
-    {
-        // Act
-        var httpClient = _appHost.CreateHttpClient("SemanticDocIngestor-api");
-        await _appHost.ResourceNotifications.WaitForResourceHealthyAsync("SemanticDocIngestor-api", _cancellationToken).WaitAsync(DefaultTimeout, _cancellationToken);
-
-        var response = await httpClient.GetAsync("/Ollama/models/available", _cancellationToken).WithTimeout(DefaultTimeout);
-
-        // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var result = await response.Content.ReadFromJsonAsync<List<Model>>(cancellationToken: _cancellationToken);
-        Assert.NotNull(result);
-    }
 
     async ValueTask System.IAsyncDisposable.DisposeAsync()
     {

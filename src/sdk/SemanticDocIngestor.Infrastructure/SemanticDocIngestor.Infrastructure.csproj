@@ -10,6 +10,8 @@
 		<Description>
 			SemanticDocIngestor.Persistence is the data access layer of the SemanticDocIngestor ecosystem. It provides a MongoDB-based persistence infrastructure tailored for storing and retrieving AI chat conversations, messages, and cached data in a scalable and performant way.
 		</Description>
+		<GenerateDocumentationFile>true</GenerateDocumentationFile>
+		<NoWarn>$(NoWarn);1591</NoWarn>
 	</PropertyGroup>
 
 	<ItemGroup>

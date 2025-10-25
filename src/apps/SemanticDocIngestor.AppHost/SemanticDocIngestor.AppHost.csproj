@@ -31,7 +31,6 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\SemanticDocIngestor.AppHost.ApiService\SemanticDocIngestor.AppHost.ApiService.csproj" />
-		<ProjectReference Include="..\SemanticDocIngestor.AppHost.BlazorUI\SemanticDocIngestor.AppHost.BlazorUI.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>

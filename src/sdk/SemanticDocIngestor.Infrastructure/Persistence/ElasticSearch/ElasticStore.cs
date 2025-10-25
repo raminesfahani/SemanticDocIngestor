@@ -4,6 +4,7 @@ using Elastic.Clients.Elasticsearch.IndexManagement;
 using Elastic.Clients.Elasticsearch.QueryDsl;
 using Microsoft.Extensions.Options;
 using SemanticDocIngestor.Domain.Abstractions.Persistence;
+using SemanticDocIngestor.Domain.DTOs;
 using SemanticDocIngestor.Domain.Entities.Ingestion;
 using SemanticDocIngestor.Infrastructure.Configurations;
 using SharpCompress.Common;
@@ -15,22 +16,99 @@ namespace SemanticDocIngestor.Infrastructure.Persistence.ElasticSearch
     public class ElasticStore(ElasticsearchClient client, IOptions<AppSettings> options) : IElasticStore
     {
         private readonly ElasticsearchClient _client = client;
-        private readonly string _indexName = options.Value.Elastic.IndexName;
+        private readonly string _semanticDocIndexName = options.Value.Elastic.SemanticDocIndexName;
+        private readonly string _docRepoIndexName = options.Value.Elastic.DocRepoIndexName;
         private static readonly string[] fields = ["content", "metadata.*"];
 
-        public async Task EnsureIndexExistsAsync()
+        public async Task EnsureSemanticDocIndexExistsAsync()
         {
-            var exists = await _client.Indices.ExistsAsync(_indexName);
+            var exists = await _client.Indices.ExistsAsync(_semanticDocIndexName);
             if (exists.Exists) return;
 
-            var create = await _client.Indices.CreateAsync(_indexName);
+            var create = await _client.Indices.CreateAsync(_semanticDocIndexName);
             if (!create.IsValidResponse)
-                throw new InvalidOperationException($"Failed to create index '{_indexName}': {create.DebugInformation}");
+                throw new InvalidOperationException($"Failed to create index '{_semanticDocIndexName}': {create.DebugInformation}");
+        }
+
+        private async Task EnsureDocRepoIndexExistsAsync()
+        {
+            var exists = await _client.Indices.ExistsAsync(_docRepoIndexName);
+            if (exists.Exists) return;
+
+            var create = await _client.Indices.CreateAsync(_docRepoIndexName);
+            if (!create.IsValidResponse)
+                throw new InvalidOperationException($"Failed to create index '{_docRepoIndexName}': {create.DebugInformation}");
+        }
+
+        public async Task<List<DocumentRepoItemDto>> GetIngestedDocumentsAsync(CancellationToken cancellationToken = default)
+        {
+            await EnsureDocRepoIndexExistsAsync();
+            // Implementation for retrieving ingested documents can be added here.
+
+            var response = await _client.SearchAsync<DocumentRepoItemDto>(s => s
+                                        .Index(_docRepoIndexName), cancellationToken);
+
+            if (response.IsValidResponse)
+            {
+                var documents = response.Documents;
+                return [.. response.Documents.OrderByDescending(d => d.UpdatedAt)];
+            }
+
+            return [];
+        }
+
+        private async Task UpdateIngestedDocsRepoAsync(List<DocumentChunk> chunks, CancellationToken cancellationToken = default)
+        {
+            await EnsureDocRepoIndexExistsAsync();
+
+            // Update list of ingested documents, e.g., for tracking purposes.
+            var files = chunks.GroupBy(c => c.Metadata?.FilePath)
+                              .Select(g => g.First().Metadata)
+                              .ToList();
+
+            // 2) Bulk index using deterministic IDs to prevent future duplicates.
+            var bulk = new BulkRequest(_docRepoIndexName)
+            {
+                Operations = new List<IBulkOperation>(files.Count),
+                Refresh = Refresh.WaitFor
+            };
+
+            foreach (var c in chunks.Where(x => x.Embedding != null && !string.IsNullOrWhiteSpace(x.Content)))
+            {
+                // if filePath is existed, don't add again
+                var existsResponse = await _client.ExistsAsync<DocumentRepoItemDto>(_docRepoIndexName, c.Metadata.FilePath ?? c.Metadata.FileName, cancellationToken: cancellationToken);
+                if (existsResponse.Exists)
+                {
+                    // Update the UpdatedAt field
+                    var updateResponse = await _client.UpdateAsync<DocumentRepoItemDto, DocumentRepoItemDto>(c.Metadata.FilePath ?? c.Metadata.FileName, u => u
+                        .Index(_docRepoIndexName)
+                        .Doc(new DocumentRepoItemDto
+                        {
+                            Metadata = c.Metadata,
+                            UpdatedAt = DateTime.UtcNow
+                        }), cancellationToken);
+                }
+                else
+                {
+                    var op = new BulkIndexOperation<DocumentRepoItemDto>(new DocumentRepoItemDto() { Metadata = c.Metadata })
+                    {
+                        Id = c.Metadata.FilePath ?? c.Metadata.FileName,
+                    };
+
+                    bulk.Operations.Add(op);
+                }
+            }
+
+            if (bulk.Operations.Count == 0)
+                return;
+
+            var response = await _client.BulkAsync(bulk, cancellationToken);
         }
 
         public async Task<bool> DeleteCollectionAsync(CancellationToken cancellationToken = default)
         {
-            var response = await _client.Indices.DeleteAsync(_indexName, cancellationToken: cancellationToken);
+            var response = await _client.Indices.DeleteAsync(_semanticDocIndexName, cancellationToken: cancellationToken);
+            await _client.Indices.DeleteAsync(_docRepoIndexName, cancellationToken: cancellationToken);
             return response.IsValidResponse && response.IsSuccess();
         }
 
@@ -41,12 +119,14 @@ namespace SemanticDocIngestor.Infrastructure.Persistence.ElasticSearch
 
             var id = BuildChunkId(chunk);
             var response = await _client.IndexAsync(chunk, d => d
-                .Index(_indexName)
+                .Index(_semanticDocIndexName)
                 .Id(id)
                 .Refresh(Refresh.WaitFor), ct);
 
             if (!response.IsValidResponse)
-                throw new InvalidOperationException($"Failed to index document chunk into '{_indexName}': {response.DebugInformation}");
+                throw new InvalidOperationException($"Failed to index document chunk into '{_semanticDocIndexName}': {response.DebugInformation}");
+
+            await UpdateIngestedDocsRepoAsync([chunk], ct);
 
             return response.IsValidResponse;
         }
@@ -56,7 +136,7 @@ namespace SemanticDocIngestor.Infrastructure.Persistence.ElasticSearch
             if (chunks is null || chunks.Count == 0) return true;
 
             // 2) Bulk index using deterministic IDs to prevent future duplicates.
-            var bulk = new BulkRequest(_indexName)
+            var bulk = new BulkRequest(_semanticDocIndexName)
             {
                 Operations = new List<IBulkOperation>(chunks.Count),
                 Refresh = Refresh.WaitFor
@@ -76,7 +156,9 @@ namespace SemanticDocIngestor.Infrastructure.Persistence.ElasticSearch
 
             var response = await _client.BulkAsync(bulk, ct);
             if (!response.IsValidResponse || response.Errors)
-                throw new InvalidOperationException($"Failed to bulk index into '{_indexName}': {response.DebugInformation}");
+                throw new InvalidOperationException($"Failed to bulk index into '{_semanticDocIndexName}': {response.DebugInformation}");
+
+            await UpdateIngestedDocsRepoAsync(chunks, ct);
 
             return true;
         }
@@ -96,10 +178,10 @@ namespace SemanticDocIngestor.Infrastructure.Persistence.ElasticSearch
         public async Task DeleteExistingChunks(string filePath, CancellationToken ct)
         {
             // No-op if index does not exist yet
-            var exists = await _client.Indices.ExistsAsync(_indexName, ct);
+            var exists = await _client.Indices.ExistsAsync(_semanticDocIndexName, ct);
             if (!exists.Exists) return;
 
-            var request = new DeleteByQueryRequest(_indexName)
+            var request = new DeleteByQueryRequest(_semanticDocIndexName)
             {
                 Refresh = true,
                 Query = Query.Bool(new BoolQuery
@@ -126,7 +208,7 @@ namespace SemanticDocIngestor.Infrastructure.Persistence.ElasticSearch
         public async Task<IEnumerable<DocumentChunk>> SearchAsync(string query, int size = 10, CancellationToken ct = default)
         {
             var response = await _client.SearchAsync<DocumentChunk>(s => s
-                .Index(_indexName)
+                .Index(_semanticDocIndexName)
                 .Size(size)
                 .Query(q => q.MultiMatch(m => m
                     .Fields(fields)
@@ -135,7 +217,7 @@ namespace SemanticDocIngestor.Infrastructure.Persistence.ElasticSearch
             , ct);
 
             if (!response.IsValidResponse)
-                throw new InvalidOperationException($"Search failed on '{_indexName}': {response.DebugInformation}");
+                throw new InvalidOperationException($"Search failed on '{_semanticDocIndexName}': {response.DebugInformation}");
 
             return response.Hits
                             .OrderByDescending(x => x.Score)
@@ -151,10 +233,10 @@ namespace SemanticDocIngestor.Infrastructure.Persistence.ElasticSearch
         private async Task DeleteExistingDocumentChunksAsync(string documentKey, CancellationToken ct)
         {
             // No-op if index does not exist yet
-            var exists = await _client.Indices.ExistsAsync(_indexName, ct);
+            var exists = await _client.Indices.ExistsAsync(_semanticDocIndexName, ct);
             if (!exists.Exists) return;
 
-            var request = new DeleteByQueryRequest(_indexName)
+            var request = new DeleteByQueryRequest(_semanticDocIndexName)
             {
                 Refresh = true,
                 Query = Query.Bool(new BoolQuery
