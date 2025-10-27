@@ -1,0 +1,16 @@
+# Ignore build outputs
+**/bin/
+**/obj/
+
+# Ignore user-specific files
+**/*.user
+**/.vs/
+**/.vscode/
+**/.idea/
+
+# Ignore secrets
+**/appsettings.Development.json
+**/.env
+
+# Ignore test results
+**/TestResults/

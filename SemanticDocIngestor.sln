@@ -11,6 +11,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SemanticDocIngestor.Infrast
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "solution", "solution", "{54B43900-9DD7-46E6-8090-23E9B690865B}"
 	ProjectSection(SolutionItems) = preProject
+		.env = .env
+		.env.example = .env.example
 		.gitattributes = .gitattributes
 		.gitignore = .gitignore
 		CODE_OF_CONDUCT.md = CODE_OF_CONDUCT.md
@@ -27,6 +29,7 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "deployment", "deployment", "{C16F5C5B-40CA-496E-8199-1A62E68C0CC8}"
 	ProjectSection(SolutionItems) = preProject
 		deployment\Azure-Pipeline.yml = deployment\Azure-Pipeline.yml
+		docker-compose.yml = docker-compose.yml
 		.github\workflows\nuget-packages.yml = .github\workflows\nuget-packages.yml
 	EndProjectSection
 EndProject
@@ -38,7 +41,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SemanticDocIngestor.AppHost
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SemanticDocIngestor.Tests", "tests\SemanticDocIngestor.AppHost.Tests\SemanticDocIngestor.Tests.csproj", "{1DC4059D-93C8-2326-0A14-ED48EAA22CCF}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "demo", "demo", "{4CA8D5C0-2250-4BDB-8735-4FA3C7ED320C}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "app", "app", "{4CA8D5C0-2250-4BDB-8735-4FA3C7ED320C}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

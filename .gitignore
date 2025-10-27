@@ -363,3 +363,10 @@ MigrationBackup/
 FodyWeavers.xsd
 /src/apps/SemanticDocIngestor.AppHost.BlazorUI/wwwroot/uploads/
 /src/apps/SemanticDocIngestor.AppHost.ApiService/wwwroot/uploads/
+
+# Docker environment files (contains secrets)
+.env
+
+# Docker volumes (if using local driver)
+*-data/
+

@@ -30,10 +30,31 @@ namespace SemanticDocIngestor.Infrastructure.Persistence
         public static IServiceCollection AddVectorStore(this IServiceCollection services, IConfiguration configuration)
         {
             var connectionString = configuration.GetConnectionString(ConstantKeys.ConnectionStrings.Qdrant);
-            var endpoint = connectionString?.Split(";")[0].Replace("Endpoint=", "");
-            var key = connectionString?.Split(";")[1].Replace("Key=", "");
-            var client = new QdrantClient(
-                new Uri(endpoint ?? throw new InvalidOperationException("Qdrant endpoint cannot be null.")), key);
+            
+            if (string.IsNullOrWhiteSpace(connectionString))
+                throw new InvalidOperationException("Qdrant connection string cannot be null or empty.");
+
+            string endpoint;
+            string? key = null;
+
+            // Check if connection string contains semicolon (formatted: Endpoint=...;Key=...)
+            if (connectionString.Contains(';'))
+            {
+                var parts = connectionString.Split(";");
+                endpoint = parts[0].Replace("Endpoint=", "").Trim();
+    
+                if (parts.Length > 1 && parts[1].Contains("Key="))
+                {
+                    key = parts[1].Replace("Key=", "").Trim();
+                }
+            }
+            else
+            {
+                // Simple URL format
+                endpoint = connectionString.Trim();
+            }
+
+            var client = new QdrantClient(new Uri(endpoint), key);
             services.AddSingleton(client);
 
             services.AddSingleton<IVectorStore, VectorStore>();

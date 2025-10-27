@@ -168,7 +168,7 @@ Add all connection strings and settings to your `appsettings.json`:
 {
   "ConnectionStrings": {
     "elasticsearch": "http://localhost:9200",
-    "qdrant": "http://localhost:6333",
+    "qdrant": "http://localhost:6334",
     "ollama": "http://localhost:11434"
   },
   "AppSettings": {
@@ -236,7 +236,7 @@ The SDK expects the following connection string names in `appsettings.json` or v
 ```json
 {
   "ConnectionStrings": {
-    "qdrant": "http://localhost:6333"
+    "qdrant": "http://localhost:6334"
   }
 }
 ```
@@ -245,7 +245,7 @@ The SDK expects the following connection string names in `appsettings.json` or v
 ```json
 {
   "ConnectionStrings": {
-    "qdrant": "http://localhost:6333;ApiKey=your-api-key-here"
+    "qdrant": "Endpoint=http://localhost:6334;Key=your-api-key-here"
   }
 }
 ```
@@ -254,10 +254,12 @@ The SDK expects the following connection string names in `appsettings.json` or v
 ```json
 {
   "ConnectionStrings": {
-    "qdrant": "https://xyz-example.qdrant.io:6333;ApiKey=your-cloud-api-key"
+    "qdrant": "Endpoint=https://xyz-example.qdrant.io:6334;Key=your-cloud-api-key"
   }
 }
 ```
+
+**Note:** Qdrant uses gRPC by default on port **6334**. If you're using the HTTP REST API, change the port to 6333.
 
 #### Ollama
 ```json
@@ -265,7 +267,6 @@ The SDK expects the following connection string names in `appsettings.json` or v
   "ConnectionStrings": {
     "ollama": "http://localhost:11434"
   }
-}
 ```
 
 **Remote Ollama:**
@@ -274,7 +275,6 @@ The SDK expects the following connection string names in `appsettings.json` or v
   "ConnectionStrings": {
     "ollama": "http://your-ollama-server:11434"
   }
-}
 ```
 
 ### Environment-Specific Configuration
@@ -286,7 +286,7 @@ Use `appsettings.Development.json` for local development:
 {
   "ConnectionStrings": {
     "elasticsearch": "http://localhost:9200",
-    "qdrant": "http://localhost:6333",
+    "qdrant": "http://localhost:6334",
     "ollama": "http://localhost:11434"
   }
 }
@@ -299,7 +299,7 @@ Use `appsettings.Production.json` or environment variables:
 {
   "ConnectionStrings": {
     "elasticsearch": "https://prod-es.company.com:9243",
-    "qdrant": "https://prod-qdrant.company.com:6333;ApiKey=${QDRANT_API_KEY}",
+    "qdrant": "https://prod-qdrant.company.com:6334;ApiKey=${QDRANT_API_KEY}",
     "ollama": "http://ollama-service:11434"
   }
 }
@@ -311,7 +311,7 @@ Set connection strings via environment variables (useful for Docker/Kubernetes):
 
 ```bash
 export ConnectionStrings__elasticsearch="http://elasticsearch:9200"
-export ConnectionStrings__qdrant="http://qdrant:6333"
+export ConnectionStrings__qdrant="http://qdrant:6334"
 export ConnectionStrings__ollama="http://ollama:11434"
 ```
 
@@ -322,11 +322,12 @@ services:
     image: your-api-image
     environment:
       - ConnectionStrings__elasticsearch=http://elasticsearch:9200
-      - ConnectionStrings__qdrant=http://qdrant:6333
+      - ConnectionStrings__qdrant=http://qdrant:6334
       - ConnectionStrings__ollama=http://ollama:11434
     depends_on:
       - elasticsearch
       - qdrant
+      - ollama
   - ollama
 ```
 
@@ -367,7 +368,7 @@ When using .NET Aspire, the SDK automatically discovers services by their regist
 | Service Name | SDK Uses For | Default Port |
 |--------------|--------------|--------------|
 | `elasticsearch` | Keyword search and metadata storage | 9200 |
-| `qdrant` | Vector embeddings and semantic search | 6333 |
+| `qdrant` | Vector embeddings and semantic search | 6334 |
 | `ollama` | LLM chat and embedding generation | 11434 |
 
 ### Aspire Container Resources
@@ -382,7 +383,7 @@ var elasticsearch = builder.AddElasticsearch("elasticsearch")
 
 var qdrant = builder.AddContainer("qdrant", "qdrant/qdrant")
     .WithBindMount("./qdrant_data", "/qdrant/storage")
-    .WithHttpEndpoint(port: 6333, targetPort: 6333, name: "qdrant");
+    .WithHttpEndpoint(port: 6334, targetPort: 6334, name: "qdrant");
 
 var ollama = builder.AddContainer("ollama", "ollama/ollama")
     .WithBindMount("./ollama_data", "/root/.ollama")
@@ -1025,7 +1026,7 @@ builder.Services.AddSingleton<ICloudFileResolver, S3FileResolver>();
 ```bash
 # View container logs in Aspire dashboard
 # Check Docker Desktop or container runtime
-# Verify port availability (9200, 6333, 11434)
+# Verify port availability (9200, 6334, 11434)
 ```
 
 #### Without .NET Aspire
@@ -1041,11 +1042,14 @@ curl http://localhost:9200
 
 **Qdrant not reachable:**
 ```bash
-# Test connection
+# Test gRPC connection (port 6334)
 curl http://localhost:6333/collections
 
 # Check connection string in appsettings.json
 # Verify Qdrant is running: docker ps
+# Ensure you're using the correct port:
+#   - gRPC (default): port 6334
+#   - HTTP REST API: port 6333
 ```
 
 **Ollama not reachable:**
@@ -1116,9 +1120,10 @@ services:
   qdrant:
     image: qdrant/qdrant:latest
     ports:
-    - "6333:6333"
-    volumes:
-      - qdrant-data:/qdrant/storage
+      - "6333:6333"
+      - "6334:6334"
+  volumes:
+  - qdrant-data:/qdrant/storage
 
   ollama:
     image: ollama/ollama:latest
@@ -1133,12 +1138,12 @@ services:
       - "8080:8080"
     environment:
       - ConnectionStrings__elasticsearch=http://elasticsearch:9200
-      - ConnectionStrings__qdrant=http://qdrant:6333
-      - ConnectionStrings__ollama=http://ollama:11434
+      - ConnectionStrings__qdrant=http://qdrant:6334
+    - ConnectionStrings__ollama=http://ollama:11434
     depends_on:
       - elasticsearch
       - qdrant
-  - ollama
+      - ollama
 
 volumes:
   elasticsearch-data:

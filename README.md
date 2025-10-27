@@ -6,6 +6,8 @@
 ![GitHub Repo stars](https://img.shields.io/github/stars/raminesfahani/SemanticDocIngestor?style=social)
 [![NuGet](https://img.shields.io/nuget/v/SemanticDocIngestor.Core)](https://www.nuget.org/packages/SemanticDocIngestor.Core)
 [![.NET Version](https://img.shields.io/badge/.NET-9.0-512BD4)](https://dotnet.microsoft.com/download/dotnet/9.0)
+[![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?logo=docker&logoColor=white)](DOCKER_COMPOSE_GUIDE.md)
+[![Docker Compose](https://img.shields.io/badge/Docker%20Compose-Supported-2496ED?logo=docker&logoColor=white)](docker-compose.yml)
 
 <p align="center">
   <img src="logo-text.png" alt="SemanticDocIngestor" />
@@ -17,6 +19,13 @@
 
 <p align="center">
   Build production-ready document ingestion pipelines with vector similarity search, keyword matching, and AI-powered answers using Ollama LLMs
+</p>
+
+<p align="center">
+  <a href="#-quickest-start-docker-compose-recommended">🐳 Quick Start with Docker</a> •
+  <a href="#-usage-examples">📝 Usage Examples</a> •
+  <a href="src/sdk/SemanticDocIngestor.Core/README.md">📖 SDK Documentation</a> •
+  <a href="DOCKER_COMPOSE_GUIDE.md">🐋 Docker Guide</a>
 </p>
 
 ---
@@ -103,6 +112,21 @@ public class DocumentController(IDocumentIngestorService documentIngestor) : Con
 
 ---
 
+## 📖 Documentation
+
+| Document | Description |
+|----------|-------------|
+| **[SDK Guide](src/sdk/SemanticDocIngestor.Core/README.md)** | Complete SDK documentation with examples, API reference, and deployment guides |
+| **[Docker Quick Reference](DOCKER_QUICK_REFERENCE.md)** | Quick commands and file reference for Docker deployment |
+| **[Docker Compose Guide](DOCKER_COMPOSE_GUIDE.md)** | Complete guide for deploying with Docker, container registries, and production setup |
+| **[Docker Deployment](DOCKER_DEPLOYMENT.md)** | Alternative Docker deployment strategies and registry push instructions |
+| **[Documentation Summary](DOCUMENTATION_SUMMARY.md)** | Overview of all documentation and packaging details |
+| **[Contributing Guide](CONTRIBUTING.md)** | How to contribute to the project |
+| **[Support](SUPPORT.md)** | Getting help and support resources |
+| **[Code of Conduct](CODE_OF_CONDUCT.md)** | Community guidelines |
+
+---
+
 ## 🏗️ Solution Architecture
 
 ### Repository Structure
@@ -141,7 +165,7 @@ graph TB
     B --> D[Cloud Resolvers]
     B --> E[RAG Service]
     
-C --> F[Vector Store - Qdrant]
+    C --> F[Vector Store - Qdrant]
     C --> G[Keyword Store - Elasticsearch]
     
     E --> H[Ollama LLM]
@@ -159,6 +183,40 @@ C --> F[Vector Store - Qdrant]
     N --> E
     E --> O[AI-Generated Answer]
 ```
+
+### Docker Deployment Architecture
+
+```mermaid
+graph TB
+    subgraph "Docker Host"
+        subgraph "semanticdoc-network"
+    API[API Service<br/>:5001]
+            ES[Elasticsearch<br/>:9200<br/>elastic-data volume]
+QD[Qdrant<br/>:6333<br/>qdrant-data volume]
+            OL[Ollama<br/>:11434<br/>ollama-data volume]
+   end
+    end
+    
+    Client[HTTP Client] --> API
+    API --> ES
+    API --> QD
+    API --> OL
+  
+    Registry[Container Registry<br/>Docker Hub / ACR / GHCR] -.->|pull| API
+ 
+    style API fill:#4CAF50
+    style ES fill:#00BCD4
+    style QD fill:#FF9800
+    style OL fill:#9C27B0
+    style Registry fill:#FFC107
+```
+
+**Docker Compose manages:**
+- 🔧 Network configuration and service discovery
+- 💾 Persistent volumes for data retention
+- 🏥 Health checks and dependency ordering
+- 🔐 Environment-based secrets management
+- 🔄 Automatic container restart policies
 
 ---
 
@@ -217,10 +275,39 @@ C --> F[Vector Store - Qdrant]
 | Component | Version | Purpose | Optional |
 |-----------|---------|---------|----------|
 | .NET SDK | 9.0+ | Runtime | ❌ Required |
-| Elasticsearch | 8.x | Keyword search | ❌ Required |
-| Qdrant | 1.x | Vector search | ❌ Required |
-| Ollama | Latest | LLM & embeddings | ✅ Optional (for RAG) |
-| Docker Desktop | Latest | Container runtime | ✅ Recommended |
+| Docker Desktop | Latest | Container runtime | ✅ Recommended (for Docker deployment) |
+| Elasticsearch | 8.x | Keyword search | ⚠️ Required (auto-provisioned in Docker) |
+| Qdrant | 1.x | Vector search | ⚠️ Required (auto-provisioned in Docker) |
+| Ollama | Latest | LLM & embeddings | ⚠️ Required (auto-provisioned in Docker) |
+
+### 🐳 Quickest Start: Docker Compose (Recommended)
+
+**Perfect for:** Getting up and running in minutes with zero infrastructure setup
+
+```bash
+# Clone the repository
+git clone https://github.com/raminesfahani/SemanticDocIngestor.git
+cd SemanticDocIngestor
+
+# Create environment configuration
+cp .env.example .env
+# Edit .env and set: ELASTIC_PASSWORD=your_secure_password
+
+# Start everything (API + Elasticsearch + Qdrant + Ollama)
+docker-compose up -d
+
+# Check status
+docker-compose ps
+
+# Access the API at http://localhost:5001
+# View API docs at http://localhost:5001/scalar/v1
+```
+
+That's it! All services are running and configured. Skip to [Usage Examples](#-usage-examples) to start ingesting documents.
+
+**📖 Complete Docker guide:** [DOCKER_COMPOSE_GUIDE.md](DOCKER_COMPOSE_GUIDE.md)
+
+---
 
 ### Option 1: Using the SDK in Your Project
 
@@ -239,7 +326,7 @@ dotnet add package SemanticDocIngestor.Core
 
 **Best for:** Exploring features, testing, or using as-is
 
-#### With .NET Aspire (Recommended)
+#### With .NET Aspire (Orchestrated Development)
 
 ```bash
 # Clone the repository
@@ -259,11 +346,11 @@ dotnet run
 # - Blazor UI: http://localhost:5001
 ```
 
-#### Without Aspire
+#### Without Aspire (Manual)
 
 ```bash
-# Start infrastructure services
-docker-compose up -d
+# Start infrastructure services first
+docker-compose up -d elasticsearch qdrant ollama
 
 # Run API service
 cd src/apps/SemanticDocIngestor.AppHost.ApiService
@@ -272,382 +359,3 @@ dotnet run
 # Run Blazor UI (in another terminal)
 cd src/apps/SemanticDocIngestor.AppHost.BlazorUI
 dotnet run
-```
-
----
-
-## 📖 Documentation
-
-| Document | Description |
-|----------|-------------|
-| **[SDK Guide](src/sdk/SemanticDocIngestor.Core/README.md)** | Complete SDK documentation with examples, API reference, and deployment guides |
-| **[Documentation Summary](DOCUMENTATION_SUMMARY.md)** | Overview of all documentation and packaging details |
-| **[Contributing Guide](CONTRIBUTING.md)** | How to contribute to the project |
-| **[Support](SUPPORT.md)** | Getting help and support resources |
-| **[Code of Conduct](CODE_OF_CONDUCT.md)** | Community guidelines |
-
----
-
-## 🎯 Usage Examples
-
-### Ingesting Documents
-
-```csharp
-// Local files
-var localFiles = new[] { @"C:\docs\report.pdf", @"C:\docs\data.xlsx" };
-await documentIngestor.IngestDocumentsAsync(localFiles);
-
-// OneDrive files
-var oneDriveFiles = new[] 
-{ 
-    "onedrive://{driveId}/{itemId}",
-    "https://1drv.ms/u/s!xxxxxxxxxxxxxx" 
-};
-await documentIngestor.IngestDocumentsAsync(oneDriveFiles);
-
-// Google Drive files
-var driveFiles = new[] 
-{ 
-    "gdrive://{fileId}",
-  "https://drive.google.com/file/d/{fileId}/view" 
-};
-await documentIngestor.IngestDocumentsAsync(driveFiles);
-
-// Mixed sources
-var mixedSources = new[]
-{
-    @"C:\local\file.pdf",
-    "onedrive://drive123/item456",
-    "gdrive://abc123def456"
-};
-await documentIngestor.IngestDocumentsAsync(mixedSources);
-```
-
-### Searching Documents
-
-```csharp
-// Simple hybrid search
-var results = await documentIngestor.SearchDocumentsAsync(
-  "quarterly revenue trends",
-    limit: 10);
-
-foreach (var chunk in results)
-{
-    Console.WriteLine($"File: {chunk.Metadata.FileName}");
-    Console.WriteLine($"Content: {chunk.Content}");
-    Console.WriteLine($"Page: {chunk.Metadata.PageNumber}");
-}
-```
-
-### AI-Powered Question Answering
-
-```csharp
-// Get an AI-generated answer with sources
-var response = await documentIngestor.SearchAndGetRagResponseAsync(
-    "What were the key findings in the Q4 report?",
-    limit: 5);
-
-Console.WriteLine($"Answer: {response.Answer}");
-Console.WriteLine("\nSources:");
-foreach (var source in response.ReferencesPath.Keys)
-{
-    Console.WriteLine($"  - {source}");
-}
-```
-
-### Streaming Responses
-
-```csharp
-// Stream the answer token-by-token
-var streamingResponse = await documentIngestor.SearchAndGetRagStreamResponseAsync(
-    "Summarize the main points",
- limit: 5);
-
-await foreach (var token in streamingResponse.Answer)
-{
-    Console.Write(token.Message.Content);
-}
-```
-
-### Progress Tracking
-
-```csharp
-// Subscribe to events
-documentIngestor.OnProgress += (sender, progress) =>
-{
-    Console.WriteLine($"Progress: {progress.Completed}/{progress.Total} - {progress.FilePath}");
-};
-
-documentIngestor.OnCompleted += (sender, progress) =>
-{
-    Console.WriteLine($"Completed! Processed {progress.Total} documents");
-};
-
-// Or query progress
-var progress = await documentIngestor.GetProgressAsync();
-Console.WriteLine($"{progress.Completed} of {progress.Total} files processed");
-```
-
----
-
-## 🔧 Configuration
-
-### Minimal Configuration (with .NET Aspire)
-
-```json
-{
-  "AppSettings": {
-    "Ollama": {
- "ChatModel": "llama3.2",
-  "EmbeddingModel": "nomic-embed-text",
-      "Temperature": 0.7,
-      "MaxTokens": 2048
-    },
-    "Qdrant": {
-      "CollectionName": "documents",
-      "VectorSize": 768,
-      "Distance": "Cosine"
-    },
-    "Elastic": {
-      "SemanticDocIndexName": "semantic_docs",
-      "DocRepoIndexName": "docs_repo"
-    }
-  }
-}
-```
-
-### Full Configuration (without Aspire)
-
-```json
-{
-  "ConnectionStrings": {
-    "elasticsearch": "http://localhost:9200",
-    "qdrant": "http://localhost:6333",
- "ollama": "http://localhost:11434"
-  },
-  "AppSettings": {
-    "Ollama": {
-      "ChatModel": "llama3.2",
-      "EmbeddingModel": "nomic-embed-text",
-      "Temperature": 0.7,
-      "MaxTokens": 2048
-    },
-    "Qdrant": {
-      "CollectionName": "documents",
-      "VectorSize": 768,
-      "Distance": "Cosine"
-    },
-    "Elastic": {
-      "SemanticDocIndexName": "semantic_docs",
-      "DocRepoIndexName": "docs_repo"
-    }
-  },
-"ResiliencyMiddlewareOptions": {
-    "RetryCount": 3,
-    "TimeoutSeconds": 30,
-    "ExceptionsAllowedBeforeCircuitBreaking": 5,
-    "CircuitBreakingDurationSeconds": 60
-  }
-}
-```
-
-**📖 See the [SDK Guide](src/sdk/SemanticDocIngestor.Core/README.md) for complete configuration details**
-
----
-
-## 🏗️ Architecture & Design
-
-### Document Processing Pipeline
-
-1. **Input Resolution**: Local paths or cloud URIs are resolved to local file paths
-2. **Document Parsing**: Files are parsed and text is extracted with metadata
-3. **Chunking**: Content is split into manageable chunks with overlap
-4. **Embedding Generation**: Chunks are converted to vector embeddings via Ollama
-5. **Dual Storage**: Chunks are stored in both Qdrant (vectors) and Elasticsearch (keywords)
-6. **Deduplication**: Deterministic IDs prevent duplicate chunks
-
-### Hybrid Search Flow
-
-1. **Parallel Search**: Query runs against both vector store and keyword store simultaneously
-2. **Result Merging**: Results from both stores are deduplicated and combined
-3. **Relevance Ranking**: Combined results are ranked by relevance scores
-4. **Context Assembly**: Top results are assembled for RAG context
-5. **Answer Generation**: Ollama generates an answer based on retrieved context
-
-### Extensibility Points
-
-- **`IDocumentProcessor`**: Add support for custom file formats
-- **`ICloudFileResolver`**: Integrate additional cloud storage providers
-- **`IVectorStore`**: Use alternative vector databases (Pinecone, Weaviate, etc.)
-- **`IElasticStore`**: Replace or extend keyword search implementation
-- **`IRagService`**: Customize LLM interactions and prompt engineering
-
----
-
-## 📊 Supported File Formats
-
-| Format | Extension | Features Extracted |
-|--------|-----------|-------------------|
-| PDF | `.pdf` | Text, page numbers, metadata |
-| Word | `.docx` | Text, sections, formatting |
-| Excel | `.xlsx` | Cell data, sheet names, row indices |
-| PowerPoint | `.pptx` | Slide content, speaker notes |
-| Text | `.txt`, `.md` | Raw text content |
-
----
-
-## 🌐 Deployment Options
-
-### Local Development
-- Use .NET Aspire for orchestration
-- Docker Compose for infrastructure
-- Development-specific connection strings
-
-### Docker
-- Containerized API and UI
-- Infrastructure in Docker Compose
-- Environment-based configuration
-
-### Kubernetes
-- Helm charts for deployment
-- ConfigMaps and Secrets for configuration
-- Horizontal pod autoscaling
-
-### Azure Container Apps
-- Deploy with `azd up` (Azure Developer CLI)
-- Aspire automatic resource provisioning
-- Managed identity for secrets
-
-### Traditional Hosting
-- IIS, Kestrel, or Nginx
-- Connection strings via appsettings or Key Vault
-- Manual infrastructure management
-
-**📖 See the [SDK Guide](src/sdk/SemanticDocIngestor.Core/README.md) for detailed deployment instructions**
-
----
-
-## 🧪 Testing
-
-```bash
-# Run all tests
-dotnet test
-
-# Run with coverage
-dotnet test --collect:"XPlat Code Coverage"
-
-# Run specific test project
-dotnet test tests/SemanticDocIngestor.AppHost.Tests
-```
-
----
-
-## 🤝 Contributing
-
-We welcome contributions! Here's how you can help:
-
-1. **Report Bugs**: [Open an issue](https://github.com/raminesfahani/SemanticDocIngestor/issues/new?template=bug_report.md)
-2. **Request Features**: [Open a feature request](https://github.com/raminesfahani/SemanticDocIngestor/issues/new?template=feature_request.md)
-3. **Submit PRs**: Read our [Contributing Guide](CONTRIBUTING.md)
-4. **Improve Docs**: Documentation PRs are always welcome
-5. **Share Examples**: Show us what you've built!
-
-### Development Setup
-
-```bash
-# Fork and clone the repository
-git clone https://github.com/YOUR_USERNAME/SemanticDocIngestor.git
-cd SemanticDocIngestor
-
-# Create a feature branch
-git checkout -b feature/amazing-feature
-
-# Make your changes and test
-dotnet build
-dotnet test
-
-# Submit a pull request
-```
-
----
-
-## 📜 License
-
-This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
-
----
-
-## 🙏 Acknowledgments
-
-Built with these amazing technologies:
-
-- **[.NET Aspire](https://learn.microsoft.com/dotnet/aspire/)** - Cloud-ready app stack for .NET
-- **[Qdrant](https://qdrant.tech/)** - High-performance vector database
-- **[Elasticsearch](https://www.elastic.co/)** - Distributed search and analytics engine
-- **[Ollama](https://ollama.ai/)** - Run large language models locally
-- **[Polly](https://github.com/App-vNext/Polly)** - .NET resilience and transient-fault-handling library
-- **[AutoMapper](https://automapper.org/)** - Convention-based object-object mapper
-- **[Serilog](https://serilog.net/)** - Flexible, structured logging
-
-Special thanks to all [contributors](https://github.com/raminesfahani/SemanticDocIngestor/graphs/contributors) who have helped make this project better!
-
----
-
-## 📞 Support & Community
-
-- **📖 Documentation**: [SDK Guide](src/sdk/SemanticDocIngestor.Core/README.md) | [Documentation Summary](DOCUMENTATION_SUMMARY.md)
-- **🐛 Bug Reports**: [GitHub Issues](https://github.com/raminesfahani/SemanticDocIngestor/issues)
-- **💬 Discussions**: [GitHub Discussions](https://github.com/raminesfahani/SemanticDocIngestor/discussions)
-- **❓ Questions**: [Stack Overflow](https://stackoverflow.com/questions/tagged/semanticdocingestor)
-- **📧 Email**: [Support](SUPPORT.md)
-
----
-
-## 🗺️ Roadmap
-
-### v1.x (Current)
-- ✅ Core SDK with hybrid search
-- ✅ Multi-source ingestion (local, OneDrive, Google Drive)
-- ✅ RAG with Ollama
-- ✅ .NET Aspire support
-- ✅ Comprehensive documentation
-
-### v2.x (Planned)
-- ⬜ Additional file formats (HTML, RTF, CSV)
-- ⬜ Advanced chunking strategies (semantic, sliding window)
-- ⬜ Custom reranking models
-- ⬜ Azure Blob Storage resolver
-- ⬜ AWS S3 resolver
-- ⬜ Multi-language support
-- ⬜ Document versioning
-- ⬜ Distributed ingestion
-
-### Future
-- ⬜ Fine-tuning support
-- ⬜ Advanced RAG techniques (HyDE, RAG-Fusion)
-- ⬜ GraphQL API
-- ⬜ gRPC support
-- ⬜ Mobile SDKs
-
-**Vote on features or suggest new ones in [Discussions](https://github.com/raminesfahani/SemanticDocIngestor/discussions)!**
-
----
-
-## 📈 Stats
-
-![GitHub stars](https://img.shields.io/github/stars/raminesfahani/SemanticDocIngestor?style=social)
-![GitHub forks](https://img.shields.io/github/forks/raminesfahani/SemanticDocIngestor?style=social)
-![GitHub issues](https://img.shields.io/github/issues/raminesfahani/SemanticDocIngestor)
-![GitHub pull requests](https://img.shields.io/github/issues-pr/raminesfahani/SemanticDocIngestor)
-![GitHub last commit](https://img.shields.io/github/last-commit/raminesfahani/SemanticDocIngestor)
-![NuGet Downloads](https://img.shields.io/nuget/dt/SemanticDocIngestor.Core)
-
----
-
-<p align="center">
-  <strong>Made with ❤️ by <a href="https://github.com/raminesfahani">Ramin Esfahani</a></strong>
-</p>
-
-<p align="center">
-  If you find this project useful, please consider giving it a ⭐️
-</p>
